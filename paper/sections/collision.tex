@@ -1,0 +1,463 @@
+\section{Finite-Codeword Collision Geometry}
+\label{sec:collision-geometry}
+
+Having defined relational fidelity independently of representation, we now study finite codewords as one concrete description family.
+A hard code induces same-codeword equality and hence a partition into at most $K$ classes; probabilistic assignments relax this to the probability that independently drawn codewords collide.
+This collision probability is the representation-side geometry used below, linking smooth optimization to hard partitions, structured binary parameterizations, and codeword-prevalence corrections.
+
+
+\subsection{Probabilistic finite encoders}
+
+A hard finite assignment is discrete, whereas learned representations are often optimized through continuous parameters.
+We therefore begin by replacing each hard codeword with a categorical distribution over the same finite alphabet.
+This retains the finite set of available states while providing a smooth representation of assignment uncertainty.
+
+Let $\mathcal Z=\{1,\ldots,K\}$ and let an encoder map an input $x$ to
+\begin{equation}
+q_\theta(\cdot\mid x)\in\Delta^{K-1},\qquad
+\Delta^{K-1}=\{q\in\R_{\ge0}^K:\textstyle\sum_z q_z=1\}.
+\label{eq:discrete-encoder}
+\end{equation}
+The map $x\mapsto q_\theta(\cdot\mid x)$ may itself be deterministic.
+Stochasticity enters only when a codeword is drawn from the resulting categorical distribution.
+
+Consider inputs $x,x'$ associated with two carrier elements, and take conditionally independent draws
+$Z\sim q_\theta(\cdot\mid x)$ and
+$Z'\sim q_\theta(\cdot\mid x')$.
+Their probability of receiving the same codeword is
+\begin{equation}
+k_\theta(x,x')
+=\sum_zq_\theta(z\mid x)q_\theta(z\mid x')
+=\Pr[Z=Z'\mid x,x'].
+\label{eq:collision-kernel}
+\end{equation}
+Thus collision is a soft version of the equality relation supplied by a finite code.
+It is large when the two assignment distributions place mass on the same codewords and becomes exact same-class membership when the distributions become deterministic.
+Because this collision event involves two independently encoded inputs, it is the order-two, or pairwise, collision probability.
+We write $k_{\theta,2}$ when the collision order needs to be explicit, but abbreviate it as $k_\theta$ throughout the main text.
+More generally, an integer-order extension requires $\alpha\ge2$ independently encoded inputs to receive the same codeword; it is developed in \ref{app:higher-order-collision-geometry}.
+
+The same expression also has a useful geometric interpretation.
+It is the ordinary inner product of two categorical probability vectors, and is therefore a discrete probability-product kernel~\citep{jebara2004probability}.
+In particular, it is symmetric, lies in $[0,1]$, and is positive semidefinite.
+For any inputs $x_i$ and real coefficients $a_i$,
+\begin{equation}
+\sum_{i,j}a_i a_j k_\theta(x_i,x_j)
+=\left\|\sum_i a_iq_\theta(\cdot\mid x_i)\right\|_2^2\ge0.
+\end{equation}
+
+Viewing collision as an inner product also shows what kinds of pairwise geometry this representation can express.
+On a finite sample, let $Q$ contain the categorical assignment vectors as its rows, so the collision Gram matrix is $\Gamma_\theta=QQ^\top$.
+Hence $\operatorname{rank}(\Gamma_\theta)\le K$: a $K$-codeword collision representation can express at most $K$ independent spectral directions of the pairwise relation.
+Raw collision therefore represents a restricted family of relational structures.
+The broader framework also includes decoders such as the block-valued construction in \cref{sec:block-summary-walkthrough}, which need not be limited to this particular form.
+
+There is one further distinction specific to probabilistic assignments.
+The diagonal of the collision kernel is
+\begin{equation}
+k_\theta(x,x)=\sum_zq_\theta(z\mid x)^2
+=\|q_\theta(\cdot\mid x)\|_2^2\in[1/K,1].
+\label{eq:self-collision}
+\end{equation}
+For a fixed input $x$, let $Z_1,Z_2\overset{\mathrm{iid}}{\sim}q_\theta(\cdot\mid x)$.
+Then $k_\theta(x,x)=\Pr[Z_1=Z_2\mid x]$, so the diagonal of the collision kernel measures the concentration of the conditional assignment distribution.
+A uniform assignment gives $k_\theta(x,x)=1/K$, while a deterministic assignment gives $k_\theta(x,x)=1$.
+Hence the diagonal entries of a soft collision matrix lie in $[1/K,1]$, and become one in the deterministic hard-partition limit.
+
+
+\subsection{Hard partitions and their relaxation}
+
+The probabilistic formulation is useful for optimization, but the finite representation of primary interest is often a hard code.
+The connection between the two is direct.
+A deterministic assignment $c_\theta:\mathcal X\to\mathcal Z$ is represented by the one-hot distribution
+$q_\theta(z\mid x)=\ind[z=c_\theta(x)]$.
+Substituting this distribution into \cref{eq:collision-kernel} gives
+\begin{equation}
+k_\theta(x,x')=\ind[c_\theta(x)=c_\theta(x')].
+\label{eq:hard-collision}
+\end{equation}
+The collision relation is then exactly membership in the same part of the partition induced by $c_\theta$.
+
+The same conclusion holds as a limit.
+Let $\{q_n(\cdot\mid x)\}_{n\ge1}$ be a sequence of categorical assignment distributions that, for every input under consideration, converges to the one-hot distribution at $c_\theta(x)$.
+Then
+\[
+\sum_z q_n(z\mid x)q_n(z\mid x')
+\longrightarrow
+\ind[c_\theta(x)=c_\theta(x')].
+\]
+Collision can therefore be viewed as a continuous relaxation of hard same-partition membership.
+
+At nonzero assignment uncertainty, collision is a graded affinity and generally lacks the transitivity of an equivalence relation.
+The distinction between the soft assignment geometry and the hard representation is consequential: a soft encoder can distribute mass broadly across the alphabet even when a chosen hardening rule assigns many or all inputs to the same codeword.
+Soft and hard relational statistics should therefore be interpreted separately.
+
+
+\subsection{Factorized binary codes}
+
+A categorical alphabet with $K$ states becomes expensive to represent explicitly when $K$ is large.
+A useful specialization obtains an exponentially large finite alphabet from a small number of binary coordinates.
+Let the code contain $b$ conditionally independent bits, so that
+$\mathcal Z=\{0,1\}^b$ and $K=2^b$.
+Writing
+$p_r(x)=\Pr[Z_r=1\mid x]$ for the conditional probability that bit $r$ takes value one at input $x$, the probability of a complete binary word
+$a=(a_1,\ldots,a_b)$ is
+\begin{equation}
+q_\theta(a\mid x)
+=\prod_{r=1}^bp_r(x)^{a_r}(1-p_r(x))^{1-a_r},
+\qquad a\in\{0,1\}^b.
+\label{eq:factorized-code}
+\end{equation}
+
+The main computational benefit is that collision can be evaluated without enumerating all $2^b$ complete words.
+Summing the equality probability over the factorized code distribution gives
+\begin{equation}
+k_\theta(x,x')
+=\prod_{r=1}^b\left[p_r(x)p_r(x')+(1-p_r(x))(1-p_r(x'))\right].
+\label{eq:bit-collision}
+\end{equation}
+Each factor is the probability that the two independently sampled values of bit $r$ agree.
+Their product is therefore the probability that the \emph{entire} binary code agrees.
+As every $p_r(x)$ approaches zero or one, the expression reduces to deterministic equality of the complete codewords.
+
+The factorization assumes that the bits are independent conditional on each fixed input $x$, which parameterizes $q_\theta(\cdot\mid x)$ as a product distribution.
+Across the input population, the probabilities $p_r(x)$ may co-vary, so the aggregate codeword distribution need not factorize across bit coordinates.
+
+The binary parameterization provides a compact factorization of a categorical distribution over $K=2^b$ complete codewords.
+Collision treats each complete word as one categorical state, so its categorical representation lives in $K$ dimensions.
+The spherical construction developed later applies to these categorical probability vectors.
+
+
+\subsection{Reference-weighted codeword affinities}
+
+Raw collision treats agreement on every codeword equally.
+Some relational objectives instead require agreement to be weighted by codeword prevalence.
+Agreement on a codeword used by almost every element may carry less distinguishing information than agreement on a rarely occupied word.
+This motivates measuring a shared assignment relative to a reference prevalence for that codeword.
+
+Let $r=(r(z))_{z\in\mathcal Z}$ be a fixed positive reference distribution on $\mathcal Z$.
+Define the reference-weighted affinity
+\begin{equation}
+a_r(x,x')
+=\sum_z\frac{q_\theta(z\mid x)q_\theta(z\mid x')}{r(z)}
+=\left\langle\frac{q_\theta(\cdot\mid x)}{\sqrt r},
+\frac{q_\theta(\cdot\mid x')}{\sqrt r}\right\rangle.
+\label{eq:reference-affinity}
+\end{equation}
+The square root and division in the vector expression are taken coordinatewise.
+Like raw collision, this quantity is positive semidefinite because it is an inner product after coordinate rescaling.
+Inverse-reference weighting can make this value exceed one, so we treat it as an affinity rather than a probability.
+
+The hard-code interpretation makes the weighting especially transparent.
+If two inputs receive the same deterministic word $z$, their affinity is $1/r(z)$; if they receive different words, it is zero.
+Agreement on a word with small reference mass is therefore weighted more strongly than agreement on a common word.
+For the uniform reference $U_K(z)=1/K$, every word receives the same correction and
+$a_{U_K}=Kk_\theta$, so the weighting changes only the global scale.
+
+A particularly important reference is supplied by the encoder's own aggregate codeword distribution.
+Fix a probability measure $\mu$ on carrier-element inputs and define
+\begin{equation}
+q_Z(z)
+:=\Pr(Z=z)
+=\E_{X\sim\mu}[q_\theta(z\mid X)].
+\label{eq:aggregate-code}
+\end{equation}
+This distribution records how frequently each codeword is used on average under the declared population.
+Taking the reference to be this aggregate gives
+\begin{equation}
+a_{q_Z}(x,x')
+=\sum_{z:q_Z(z)>0}\frac{q_\theta(z\mid x)q_\theta(z\mid x')}{q_Z(z)}.
+\label{eq:qz-affinity}
+\end{equation}
+The affinity now corrects agreement by the actual prevalence of the shared codeword: collisions through frequently occupied states are downweighted, while collisions through less common states receive greater weight.
+
+Inactive codewords are omitted from the sum.
+Indeed, $q_Z(z)=0$ implies
+$q_\theta(z\mid X)=0$ almost surely under $\mu$, so this support convention is well defined on the declared population.
+Inputs outside the support of that population would require a separate convention.
+
+This endogenous inverse-mass correction will be important later.
+The same form appears in the exact centroid-reconstruction and normalized-association correspondences, where codeword mass determines how within-code agreement should be normalized.
+An \emph{external} reference can separately specify a desired marginal organization when used in a prior-matching criterion.
+
+\section{Codeword Organization and Spherical Geometry}
+\label{sec:collision-entropy}
+
+Collision also describes how a finite code is organized across a population: averaging it yields aggregate occupancy and R\'enyi-2 effective code count.
+We then distinguish external-reference organization from endogenous mass correction and use radial normalization to expose the spherical geometry of categorical assignments.
+
+\subsection{Population collision and effective occupancy}
+
+For $X,X'\overset{\mathrm{iid}}{\sim}\mu$, the population collision probability depends only on the aggregate codeword distribution:
+\begin{align}
+\E[k_\theta(X,X')]
+&=\sum_z\E[q_\theta(z\mid X)]\E[q_\theta(z\mid X')]\\
+&=\sum_zq_Z(z)^2.
+\label{eq:population-collision}
+\end{align}
+The right-hand side is the collision probability of the aggregate codeword distribution itself.
+It is large when population mass is concentrated on a few codewords and smaller when usage is spread more broadly.
+The iid population sampling is essential to this occupancy interpretation: independence makes the average collision depend only on the aggregate codeword probabilities $q_Z(z)$.
+For pairs drawn from a relation-specific joint distribution, such as graph edges, the average collision also reflects dependence between the paired assignments and is therefore a different relational statistic.
+The measure $\mu$ must therefore be part of the interpretation: it may be uniform over the carrier of a single object, degree-weighted over the vertices of a graph, or defined by a declared pooling of carrier elements across a collection of relational objects.
+
+Because population collision is exactly the squared $\ell_2$ mass of the aggregate codeword distribution, it has a natural information-theoretic representation through order-two R\'enyi entropy~\citep{renyi1961measures}:
+\begin{equation}
+H_2(q_Z)=-\log\sum_zq_Z(z)^2
+=-\log\E[k_\theta(X,X')].
+\label{eq:collision-entropy}
+\end{equation}
+We write $R_2=H_2(q_Z)$ for this collision-occupancy measure.
+Entropy is useful analytically, but the same quantity can be expressed as an effective number of equally occupied codewords:
+\begin{equation}
+K_{\mathrm{eff}}=\exp(H_2(q_Z))
+=\frac{1}{\sum_zq_Z(z)^2},\qquad 1\le K_{\mathrm{eff}}\le K.
+\label{eq:effective-code-count}
+\end{equation}
+Uniform use of exactly $M$ words gives $K_{\mathrm{eff}}=M$.
+For nonuniform occupancy, the same expression gives the inverse-collision, or inverse-Simpson, effective count, which decreases as probability mass becomes more concentrated.
+
+Collision-effective occupancy is only one summary of code use.
+It is useful to place it alongside nominal alphabet size, active support, and Shannon entropy because these quantities coincide only in special cases:
+\begin{equation}
+\begin{aligned}
+R_{\mathrm{nom}}&=\log K,&
+R_0&=\log|\operatorname{supp}(q_Z)|,\\
+R_1&=-\sum_zq_Z(z)\log q_Z(z),&
+R_2&=-\log\sum_zq_Z(z)^2.
+\end{aligned}
+\label{eq:finite-state-rate-hierarchy}
+\end{equation}
+They satisfy $R_2\le R_1\le R_0\le R_{\mathrm{nom}}$.
+All logarithms are natural unless specified otherwise, and dividing these quantities by $\log 2$ expresses them in bits.
+These quantities summarize different aspects of codeword use.
+When codewords are encoded under an appropriate probabilistic coding model, the Shannon entropy $H_1(q_Z)$ can also characterize the asymptotic average coding cost per codeword.
+Any such encoded payload that forms part of the retained description contributes to the resource functional $\Omega$.
+
+Aggregate occupancy also differs from conditional assignment uncertainty.
+If every input has a deterministic assignment, self-collision is one even when population collision is small.
+Conversely, the input-independent encoder $q_\theta(\cdot\mid x)=U_K$ has maximal aggregate $H_2$ but conveys no input dependence through its sampled codeword.
+For soft encoders, broad aggregate occupancy can therefore coexist with a concentrated hard partition or weak input dependence.
+The associated conditional-collision and divergence-based dependence quantities are recorded in \ref{app:conditional-collision-dependence}.
+
+\subsection{External references and endogenous mass correction}
+
+Aggregate collision measures concentration without specifying what pattern of codeword use is preferred.
+In some settings, organization is meaningful only relative to a reference distribution.
+An external reference can encode a desired marginal pattern, such as equal use of exchangeable codewords, whereas choosing the reference masses as $r(z)=q_Z(z)$ serves a different purpose: it compensates local agreement for the prevalence actually produced by the encoder.
+For fixed positive reference masses $r(z)$, independent population averaging gives
+\begin{equation}
+\E[a_r(X,X')]=\sum_z\frac{q_Z(z)^2}{r(z)},
+\qquad
+D_2(q_Z\|r)=\log\E[a_r(X,X')].
+\label{eq:renyi-reference-affinity}
+\end{equation}
+Thus reference-weighted affinities have a population interpretation through R\'enyi divergence~\citep{renyi1961measures,vanerven2014renyi}.
+When the corresponding divergence is used as an organization penalty, the external reference specifies the target marginal organization of the alphabet.
+For exchangeable words, uniform matching gives
+\begin{equation}
+D_2(q_Z\|U_K)=\log K-H_2(q_Z).
+\label{eq:uniform-renyi}
+\end{equation}
+Minimizing this divergence encourages broader effective occupancy.
+Adding $+\lambda H_2(q_Z)$ to a minimized objective does the opposite: it encourages concentration.
+The sign of the regularizer therefore determines whether it encourages broad occupancy or concentration.
+
+For comparison, $D_{\mathrm{KL}}(q_Z\|U_K)=\log K-H_1(q_Z)$ also has the uniform optimum.
+Although $H_2\le H_1$ for each distribution, the two entropies can rank candidate distributions differently and induce distinct level sets around their common optimum.
+The general identity $D_\alpha(q\|U_K)=\log K-H_\alpha(q)$ and the sign conventions are collected with the higher-order material in \ref{app:higher-order-collision-geometry}.
+
+For the endogenous choice $r(z)=q_Z(z)$, inverse-mass normalization gives
+\begin{equation}
+\E[a_{q_Z}(X,X')]=1.
+\label{eq:endogenous-reference-expectation}
+\end{equation}
+For almost every fixed $x$, even $\E_{X'}[a_{q_Z}(x,X')]=1$.
+This unit expectation results from correcting local agreement by the occupancy induced by the encoder.
+The aggregate masses $q_Z(z)$ therefore supply endogenous inverse-mass normalization when used as the reference and can separately enter a prior-matching penalty when compared with an external reference.
+
+\subsection{Radial normalization and cosine similarity}
+
+The raw collision kernel is the Euclidean inner product of categorical probability vectors, and therefore combines two geometric effects: the angular agreement between their directions and the magnitudes of their Euclidean norms.
+For categorical distributions, these norms are themselves meaningful, since their squared values are self-collision probabilities and hence encode R\'enyi-2 concentration.
+It is therefore useful to separate concentration from angular agreement when studying the geometry induced by collision.
+Radial normalization does exactly this, mapping categorical probability vectors to the positive unit sphere, where normalized collision becomes cosine similarity.
+For $q\in\Delta^{K-1}$, define
+\begin{equation}
+u(q)=\frac{q}{\|q\|_2}\in\mathbb S_+^{K-1},\qquad
+\mathbb S_+^{K-1}=\{u\in\R_{\ge0}^K:\|u\|_2=1\}.
+\label{eq:sphere-map}
+\end{equation}
+The map is bijective, with inverse
+\begin{equation}
+q=\frac{u}{\|u\|_1}.
+\label{eq:sphere-map-inverse}
+\end{equation}
+A more standard spherical representation of probability distributions is the elementwise square-root map $q\mapsto\sqrt q$, for which the spherical inner product becomes the Bhattacharyya coefficient and which underlies Hellinger and information-geometric constructions~\citep{amari2016information}.
+The radial normalization used here serves a different purpose: because collision is the ordinary inner product $q^\top q'$, normalizing by the Euclidean norm isolates the angular component of that collision geometry while preserving a bijective representation of the simplex.
+
+Writing $k_2(q,q')=q^\top q'$, normalized collision is
+\begin{equation}
+u(q)^\top u(q')
+=\frac{k_2(q,q')}{\sqrt{k_2(q,q)k_2(q',q')}}.
+\label{eq:normalized-collision}
+\end{equation}
+Thus normalized collision is exactly cosine similarity on the nonnegative spherical orthant: it keeps the angular agreement between assignments, while raw collision also depends on the concentration of each assignment.\footnote{The negative logarithm of this normalized inner product is the discrete analogue of the Cauchy--Schwarz divergence of \citet{jenssen2006cauchy}.}
+This connects the finite-codeword realization to hyperspherical alignment~\citep{wang2020alignment}, while retaining the categorical constraints.
+The one-hot representations of hard words occupy the fixed coordinate directions $e_z$.
+Relabeling complete codewords permutes these directions; it does not create an arbitrary rotationally invariant embedding family.
+A factorized bit parameterization can impose further restrictions on which codeword relabelings preserve its parameterized family.
+
+The normalized similarity factors out the explicit self-collision multipliers from the pairwise score.
+\begin{equation}
+\|q\|_2^2
+=k_2(q,q)
+=\sum_z q(z)^2
+=\exp[-H_2(q)],
+\qquad
+\|q\|_2
+=\exp[-H_2(q)/2].
+\label{eq:collision-norm-entropy}
+\end{equation}
+If $\cos\vartheta=u(q)^\top u(q')$, then
+$k_2(q,q')=q^\top q'=\|q\|_2\|q'\|_2\cos\vartheta$, and therefore
+\begin{equation}
+k_2(q,q')
+=\exp\!\left[-\tfrac12\bigl(H_2(q)+H_2(q')\bigr)\right]\cos\vartheta.
+\label{eq:collision-angular-decomposition}
+\end{equation}
+This decomposition shows that raw collision combines angular agreement with the R\'enyi-2 concentration of each assignment.
+The spherical map itself is lossless on the simplex, since $q$ can be recovered from $u(q)$ through \cref{eq:sphere-map-inverse}, while cosine similarity isolates only the angular component.
+Thus raw and normalized collision emphasize different aspects of the same categorical geometry.
+
+\subsection{Entropy in spherical coordinates}
+
+Having separated raw collision into angular agreement and R\'enyi-2 concentration in \cref{eq:collision-angular-decomposition}, we now express the entropy-based occupancy measures introduced in \cref{eq:finite-state-rate-hierarchy} in the same spherical coordinates.
+This provides a common geometric language for two aspects of the finite-codeword representation: angles between spherical vectors describe normalized collision between assignments, while the geometry of an individual spherical vector describes the concentration and organization of the corresponding categorical distribution.
+For $u=q/\|q\|_2$, the inverse relation gives
+\begin{equation}
+H_2(q)=2\log\|u\|_1.
+\label{eq:h2-spherical}
+\end{equation}
+Let $u_U=\mathbf1/\sqrt K$ and let $\vartheta_U$ be its angle to $u$.
+Since $\cos\vartheta_U=\|u\|_1/\sqrt K$,
+\begin{equation}
+D_2(q\|U_K)=-2\log\cos\vartheta_U
+=\log\bigl(1+K\|q-U_K\|_2^2\bigr).
+\label{eq:renyi-angular}
+\end{equation}
+These are exact changes of coordinates.
+At the level of one input, increasing $H_2(q_\theta(\cdot\mid x))$ makes the assignment less concentrated.
+At the level of the aggregate probabilities $q_Z(z)$, increasing $H_2(q_Z)$ spreads aggregate codeword occupancy.
+The same algebra describes different objects depending on which distribution is inserted.
+
+R\'enyi-2 has an especially simple angular description, while Shannon entropy provides another organization measure expressible through $u$:
+\begin{equation}
+H_1(q)=\log\|u\|_1
+-\frac{1}{\|u\|_1}\sum_i u_i\log u_i,
+\label{eq:shannon-spherical}
+\end{equation}
+with $0\log0=0$.
+Unlike $H_2$, it depends on the full coordinate profile rather than only the angle to the uniform direction.
+The two entropies share collapsed and uniform extrema but generally have different level sets.
+The broader R\'enyi expression appears in \ref{app:renyi-spherical-coordinates}.
+
+Taken together, these identities explain why order two provides a particularly coherent description of this finite-codeword realization: local equality probability, population collision, and normalized cosine geometry all arise from the same pairwise collision statistic.
+The empirical and modelling choice between R\'enyi-2, Shannon, and other regularizers remains application dependent.
+
+\section{Alignment, Separation, and Relational Requirements}
+\label{sec:alignment-separation}
+
+We now use the collision geometry to express source-specific relational requirements.
+Favored and disfavored pairs control alignment and separation, while an optional marginal term controls how the alphabet is used; these distinct roles lead to the learning objectives below.
+
+\subsection{From the source relation to a learning objective}
+
+Let $(\mathsf V,\mathsf V')\sim P_{\mathrm{pair}}$ be a declared distribution on carrier pairs, and let $x_{\mathsf V},x_{\mathsf V'}$ denote their corresponding encoder-side observations.
+A code-induced pair statistic $\psi_\theta$ may be raw collision, reference-weighted affinity, normalized collision, or a dissimilarity such as $-\log k_\theta$.
+A generic pairwise learning objective is
+\begin{equation}
+\mathcal L_{\mathrm{rel}}(\theta)
+=\E_{(\mathsf V,\mathsf V')\sim P_{\mathrm{pair}}}\left[\ell\bigl(S(\mathsf V,\mathsf V'),\psi_\theta(x_{\mathsf V},x_{\mathsf V'})\bigr)\right].
+\label{eq:generic-relational-objective}
+\end{equation}
+The statistic may itself be the reconstructed relation, or it may control a decoder or selector used to form that relation.
+Whether this objective equals the declared relational distortion depends on that reconstruction or evaluation convention; otherwise it may serve as a training surrogate for the desired fidelity.
+
+For a favored-pair distribution $P_+$ on carrier pairs, an alignment loss decreases with the desired affinity:
+\begin{equation}
+\mathcal L_{\mathrm{align}}
+=\E_{(\mathsf V,\mathsf V')\sim P_+}[\ell_+(\psi_\theta(x_{\mathsf V},x_{\mathsf V'}))].
+\label{eq:general-alignment}
+\end{equation}
+For example, $\ell_+(k)=-\log k$ promotes collision, with infinite loss at zero overlap unless a numerical surrogate is explicitly substituted.
+Using normalized collision instead promotes angular agreement without the same concentration factors.
+For dissimilarity-valued statistics, the monotonic directions reverse.
+
+\subsection{Pair-specific separation and aggregate organization}
+
+A source can also identify pairs whose collision would erase a required distinction.
+For an appropriate disfavored-pair distribution $P_-$ on carrier pairs,
+\begin{equation}
+\mathcal L_{\mathrm{sep}}^{\mathrm{rel}}
+=\E_{(\mathsf V,\mathsf V')\sim P_-}[\ell_-(\psi_\theta(x_{\mathsf V},x_{\mathsf V'}))],
+\label{eq:relational-separation}
+\end{equation}
+where $\ell_-$ increases with undesirable affinity.
+This is a pair-specific condition.
+By contrast,
+\begin{equation}
+\mathcal L_{\mathrm{org}}=D_2(q_Z\|r)
+\label{eq:marginal-organization}
+\end{equation}
+compares population occupancy with an external reference.
+Two partitions can have identical occupancy and different pairwise equivalences: marginal matching organizes population use, while pair-specific terms specify which source relations should survive.
+
+A combined objective can therefore be written as
+\begin{equation}
+\mathcal L
+=\mathcal L_{\mathrm{align}}
++\lambda_{\mathrm{rel}}\mathcal L_{\mathrm{sep}}^{\mathrm{rel}}
++\lambda_{\mathrm{org}}D_2(q_Z\|r),
+\qquad\lambda_{\mathrm{rel}},\lambda_{\mathrm{org}}\ge0.
+\label{eq:alignment-relational-marginal}
+\end{equation}
+Only the terms required by the learning problem need be present.
+Uniform prior matching supplies one possible population-level noncollapse mechanism, while relational separation acts on specified pairs.
+This clarifies the analogy with alignment and uniformity on a hypersphere~\citep{wang2020alignment}: the finite categorical case has a fixed available frame and an explicitly chosen marginal reference, rather than an unrestricted continuous geometry.
+
+\subsection{Occupancy, fidelity, and resource constraints}
+\label{sec:occupancy-frontiers}
+
+Occupancy is a property of realized code use, not by itself the complete description resource.
+We therefore study occupancy constraints alongside the relational distortion defined in \cref{sec:relational-distortion} within the chosen finite-codeword family.
+Let $m_{S,\theta}$ denote the description induced by parameter setting $\theta$, and define $D_{\mathrm{rel}}(\theta):=\Delta_V\!\left(S,\mathsf{Dec}_V(m_{S,\theta})\right)$ as the relational distortion within this family, following the complete-description formulation in \cref{eq:lossy-relational-compression}.
+Then
+\begin{equation}
+D_{\mathrm{rel}}^\star(K)=\inf_{\theta:|\mathcal Z|\le K}D_{\mathrm{rel}}(\theta).
+\end{equation}
+The other parts of the description and decoder family must be held fixed or explicitly controlled; otherwise an auxiliary payload could carry arbitrary source information while the code alphabet remains small.
+
+For $R_2(\theta)=H_2(q_Z)$, define
+\begin{equation}
+D_{\le}^\star(R)=\inf_{\theta:R_2(\theta)\le R}D_{\mathrm{rel}}(\theta),\qquad
+D_{\ge}^\star(R)=\inf_{\theta:R_2(\theta)\ge R}D_{\mathrm{rel}}(\theta).
+\label{eq:relational-complexity-distortion-frontier}
+\end{equation}
+An upper occupancy bound and a lower occupancy requirement answer different questions.
+The first limits realized code use; the second enforces noncollapse or organization.
+An inverse requirement can also be written $R_2^\star(D)=\inf_{\theta:D_{\mathrm{rel}}(\theta)\le D}R_2(\theta)$.
+These definitions are occupancy--fidelity relations; an operational coding model can additionally relate them to code length.
+
+For direct positive-relation distortion, the one-codeword solution can have zero distortion, making the upper-bound problem trivial.
+A lower bound on $R_2$ instead asks how much relational fidelity can be retained while using a noncollapsed alphabet.
+At fixed $K$, an objective
+\begin{equation}
+D_{\mathrm{rel}}(\theta)+\lambda_{\mathrm{org}}D_2(q_Z\|U_K)
+=D_{\mathrm{rel}}(\theta)-\lambda_{\mathrm{org}}R_2(\theta)
++\lambda_{\mathrm{org}}\log K
+\label{eq:organization-lagrangian}
+\end{equation}
+encourages this second direction.
+Because this objective encourages occupancy rather than imposing an upper resource budget, its empirical distortion trajectory can increase with $R_2$.
+Nonconvex optimization and discrete feasible sets also mean that scalar penalties need not recover every constrained frontier point.

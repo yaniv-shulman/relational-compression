@@ -1,0 +1,247 @@
+\section{Existing Methods Through the Framework}
+\label{sec:methods-map}
+
+This section identifies the framework components in representative existing methods and then develops the block-valued summary of \cref{eq:block-valued-relational-summary} as a worked example.
+Readers interested primarily in the finite-codeword construction may proceed directly to \cref{sec:collision-geometry}.
+
+\subsection{Representative mappings}
+
+Relational compression has explicit precedents, including the fuzzy-relational image-compression construction of \citet{hirota1999fuzzy} and graph-specific rate--distortion formulations~\citep{lynn2021compressibility,wafula2023rate}.
+\Cref{tab:method-framework-map} places these alongside graph approximation, compact representation, and relational transfer while retaining each construction's own fidelity and resource convention.
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.12}
+\setlength{\extrarowheight}{1pt}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{0.19\linewidth}
+                            >{\raggedright\arraybackslash}X
+                            >{\raggedright\arraybackslash}X
+                            >{\raggedright\arraybackslash}X}
+\toprule
+Construction & Source and fidelity & Description and reconstruction & Resource \\
+\midrule
+Graph summaries~\citep{riondato2017graph}
+& Adjacency structure; reconstruction or cut-norm error
+& Vertex groups and superedge values; block-valued relation
+& Assignments and summary values \\
+
+Spectral sparsification~\citep{spielman2011effective}
+& Laplacian quadratic forms; relative approximation
+& Sparse weighted edges; reconstructed Laplacian
+& Edge count or encoded weighted-edge description \\
+
+Spectral hashing~\citep{weiss2008spectral}
+& Source similarities; similarity-weighted code-distance criterion
+& Binary codes; Hamming geometry
+& Bits per element \\
+
+$t$-SNE~\citep{vandermaaten2008visualizing}
+& Pair-affinity distribution; KL discrepancy
+& Low-dimensional coordinates; normalized pair affinity
+& Coordinate dimension \\
+
+Distance-wise relational distillation~\citep{park2019relational}
+& Teacher pair distances; relational discrepancy
+& Student features or student model; induced pair distances
+& Feature or model representation \\
+
+Centroid quantization~\citep{gray1998quantization}
+& Squared source distances; within-code pairwise distortion
+& Assignments and centroid reproductions
+& Assignments and reproduction vectors \\
+
+Normalized cut~\citep{shi2000normalized,dhillon2004kernel}
+& Graph affinities; volume-normalized partition criterion
+& Finite assignments; partition equality
+& Finite partition cardinality \\
+\bottomrule
+\end{tabularx}
+\caption{Representative methods expressed through the core components of the relational-compression framework: source relation, fidelity criterion, retained description, reconstruction, and resource.}
+\label{tab:method-framework-map}
+\end{table}
+
+\paragraph{Graph descriptions}
+Graph summarization is a broad literature on constructing smaller or more interpretable descriptions of graph structure, with objectives including storage reduction, query support, visualization, and structural pattern discovery~\citep{liu2018graph,shabani2024comprehensive}.
+In the family studied by \citet{riondato2017graph}, vertex groups and superedge densities reconstruct a block-valued approximation to the source graph.
+A pair's group indices select a stored reproduction value; the worked example below makes this decoder explicit.
+
+Spectral sparsification emphasizes the behavior supported by a graph rather than the accuracy of individual adjacency entries.
+\citet{spielman2011effective} construct sparse weighted subgraphs whose Laplacian quadratic forms approximate those of the source for every signal.
+For a nonzero source Laplacian $L$ and reconstructed Laplacian $\widetilde L$ on the same carrier, with the same nullspace, a corresponding fidelity is
+\begin{equation}
+D_{\mathrm{spec}}(L,\widetilde L)
+=\sup_{f:f^\top Lf>0}
+\frac{\bigl|f^\top(L-\widetilde L)f\bigr|}{f^\top Lf}.
+\end{equation}
+The absolute value measures relative deformation in either direction, accommodating the reweighting of retained edges.
+For deletion or attenuation, where $0\preceq\widetilde L\preceq L$, the operator distortion in \cref{eq:operator-worst-case-distortion} measures relative energy removed.
+The sparse edge set and its weights determine the reconstructed Laplacian and the description cost.
+
+\paragraph{Codes and coordinates}
+Compact element representations allow relations to be evaluated without storing a value for every pair.
+Spectral hashing~\citep{weiss2008spectral} uses binary codes whose Hamming geometry reflects source similarities.
+The finite description is the collection of codes, and the number of bits per code specifies its per-element capacity.
+A hash function used to encode new observations has a separate storage or shared-model convention.
+The relational decoder here is Hamming distance: distinct codewords can represent nearby elements as well as distant ones.
+
+The $t$-SNE construction~\citep{vandermaaten2008visualizing} gives a continuous-coordinate example.
+Its source is a normalized pair-affinity distribution $S$ on distinct ordered pairs.
+Coordinates $y_i$ determine the reconstructed distribution
+\begin{equation}
+\widetilde S_{ij}
+=\frac{(1+\|y_i-y_j\|_2^2)^{-1}}
+{\sum_{a\ne b}(1+\|y_a-y_b\|_2^2)^{-1}},
+\qquad i\ne j,
+\end{equation}
+and the final objective is $D_{\mathrm{KL}}(S\|\widetilde S)$.
+The stored coordinates suffice to evaluate the affinities, including their normalization.
+This mapping uses coordinate dimension as the structural resource.
+A finite-bit version additionally specifies coordinate precision and evaluates the relations produced by those quantized coordinates.
+
+\paragraph{Relational transfer}
+A teacher can supply the source relation even when the original observations remain available.
+The distance-wise component of relational knowledge distillation~\citep{park2019relational} uses normalized teacher pair distances to supervise the relations induced by student features.
+For a fixed evaluation collection, the student features and the prescribed distance-normalization rule determine the reconstructed relation.
+An inductive interpretation instead retains a student model and computes the features from available observations.
+The constrained representation is feature storage in the first case and the student model in the second; its size and precision specify the corresponding resource.
+The method also includes an angle-wise term defined on triples of examples, providing a concrete higher-arity relational example.
+\ref{app:higher-order-collision-geometry} develops higher-order collision constructions, while noting that source-relation arity and collision arity are distinct; the main development here focuses on the pairwise case.
+
+\paragraph{Classical objective correspondences}
+Relational structure can also emerge from reformulating an objective that begins with a different description of fidelity.
+Squared-error centroid reconstruction admits an exact within-code pairwise form, while normalized cut evaluates how a partition preserves graph affinities after accounting for group volumes.
+\Cref{sec:vq,sec:normalized-cut-realization} develop these correspondences using inverse-mass-weighted code affinity.
+Their role is to expose common mathematical structure: the full quantizer retains reproduction vectors as well as assignments, whereas the partition can be evaluated against the source graph using its equality relation alone.
+These examples illustrate why specifying a relational source and its fidelity can be informative even when the original objective is introduced through reconstruction or partitioning.
+
+\subsection{A worked example: block-valued relational summaries}
+\label{sec:block-summary-walkthrough}
+
+We now return to the block-valued relational summary introduced in \cref{eq:block-valued-relational-summary} and make its fidelity and resource accounting explicit.
+Following this description idea from graph summarization~\citep{riondato2017graph}, we derive the optimal block values under squared relational error and then account for their finite-precision storage.
+The example shows how element assignments, together with a reproduction table, support a reconstructed relation richer than same-group equality.
+By contrast, beginning with \cref{sec:collision-geometry}, the subsequent finite-codeword development focuses on equality and its probabilistic collision relaxation as the primitive representation-side relation.
+
+Let $V=\{1,\ldots,n\}$ with $n\ge2$, and let $S$ be a symmetric real-valued relation with a fixed zero diagonal.
+We evaluate the unordered distinct pairs
+\begin{equation}
+\mathcal P=\{(i,j):1\le i<j\le n\}.
+\end{equation}
+Choose an assignment $c:V\to\{1,\ldots,K\}$ and a symmetric table $\Xi\in\R^{K\times K}$.
+The retained description is $m_S=(c,\Xi)$, and its decoder is
+\begin{equation}
+\widetilde S_{ij}=\Xi_{c(i),c(j)}\quad(i\ne j),
+\qquad
+\widetilde S_{ii}=0.
+\label{eq:block-summary-decoder}
+\end{equation}
+An entry $\Xi_{aa}$ reproduces relations between distinct elements assigned to group $a$.
+Thus the assignments determine which pairs share a reproduction, and the table determines the value reproduced.
+
+The squared relational distortion is
+\begin{equation}
+D_{\mathrm{block}}(S;c,\Xi)
+=\frac{1}{|\mathcal P|}
+\sum_{(i,j)\in\mathcal P}
+\bigl(S_{ij}-\Xi_{c(i),c(j)}\bigr)^2.
+\label{eq:block-summary-distortion}
+\end{equation}
+For $a\le b$, define
+\[
+B_{ab}(c)
+:=
+\{(i,j)\in\mathcal P:
+\min\{c(i),c(j)\}=a,\;
+\max\{c(i),c(j)\}=b\},
+\]
+so $B_{ab}(c)$ contains exactly the evaluated pairs whose two assigned groups are $a$ and $b$, irrespective of their order.
+Once the assignment is fixed, choosing the table becomes a collection of independent reproduction problems, one for each nonempty block.
+The variance identity supplies both the optimal reproduction and its error decomposition.
+
+\begin{proposition}[Optimal block reproduction]
+\label{prop:block-means}
+For a fixed assignment $c$, each block with $|B_{ab}(c)|>0$ is optimally reproduced by
+\begin{equation}
+\Xi_{ab}^\star
+=\frac{1}{|B_{ab}(c)|}
+\sum_{(i,j)\in B_{ab}(c)}S_{ij}.
+\label{eq:block-optimal-mean}
+\end{equation}
+For any symmetric table $\Xi$,
+\begin{equation}
+\begin{aligned}
+D_{\mathrm{block}}(S;c,\Xi)
+={}&D_{\mathrm{block}}(S;c,\Xi^\star)\\
+&+\frac{1}{|\mathcal P|}
+\sum_{\substack{a\le b\\|B_{ab}(c)|>0}}
+|B_{ab}(c)|(\Xi_{ab}-\Xi_{ab}^\star)^2.
+\end{aligned}
+\label{eq:block-mean-decomposition}
+\end{equation}
+Empty blocks may be assigned a fixed default value.
+\end{proposition}
+
+\begin{proof}
+In each nonempty block, expand
+$S_{ij}-\Xi_{ab}=(S_{ij}-\Xi_{ab}^\star)+(\Xi_{ab}^\star-\Xi_{ab})$.
+The cross term vanishes because
+$\sum_{(i,j)\in B_{ab}(c)}(S_{ij}-\Xi_{ab}^\star)=0$.
+Summing the remaining squared terms over blocks gives \cref{eq:block-mean-decomposition} and the minimizing table.
+\end{proof}
+
+The optimal table averages the relation values that the assignment has placed together.
+For binary adjacency, each reproduction is the edge density of its block.
+For a weighted source, it is the corresponding mean relation value.
+The first term in \cref{eq:block-mean-decomposition} measures variation within these blocks; the second measures the additional error from using any other table.
+The same calculation extends directly to a nonuniform pair distribution $P_{\mathrm{pair}}$ from \cref{eq:pairwise-relational-fidelity}, yielding weighted block means.
+
+For example, consider
+\begin{equation}
+S=\begin{pmatrix}
+0&0&1&3\\
+0&0&3&1\\
+1&3&0&0\\
+3&1&0&0
+\end{pmatrix},
+\qquad
+c=(1,1,2,2).
+\label{eq:block-toy-source}
+\end{equation}
+The two within-group relation values are zero, while the four cross-group values alternate between one and three.
+Averaging uniformly over the six unordered pairs, the optimal table and reconstruction are
+\begin{equation}
+\Xi^\star=\begin{pmatrix}0&2\\2&0\end{pmatrix},
+\qquad
+\widetilde S=\begin{pmatrix}
+0&0&2&2\\
+0&0&2&2\\
+2&2&0&0\\
+2&2&0&0
+\end{pmatrix}.
+\label{eq:block-toy-reconstruction}
+\end{equation}
+Each cross-group pair has squared error one, giving total average distortion $4/6=2/3$.
+The summary retains the source's cross-group organization while averaging the variation within it.
+By contrast, masking the source to retain only pairs with $c(i)=c(j)$ gives the zero matrix for the same assignment and has distortion $20/6=10/3$.
+The table decoder preserves the strong relations between groups that this mask removes.
+
+\paragraph{Description cost and relation-value quantization}
+To describe the summary with finitely many bits, we also specify how its table values are represented.
+Choose a shared reproduction alphabet containing at most $2^t$ values, where $t\ge1$ is an integer.
+Conditional on $n$, $K$, the carrier ordering, and this alphabet, a fixed-length scheme that stores every assignment and all upper-triangular table entries uses
+\begin{equation}
+\Omega_t(c,\Xi)
+=n\lceil\log_2K\rceil+\frac{K(K+1)}{2}\,t
+\label{eq:block-description-cost}
+\end{equation}
+bits.
+The first term describes which group contains each element; the second describes the relations between groups.
+This makes the allocation of resources explicit: a larger group alphabet permits a finer block structure but requires more assignment or table capacity.
+
+For a fixed assignment, \cref{eq:block-mean-decomposition} also identifies the optimal quantized table.
+Each active entry is a nearest permitted value to $\Xi_{ab}^\star$, and its contribution above the unquantized optimum is $|B_{ab}(c)|/|\mathcal P|$ times the squared quantization error.
+Grouping and table precision therefore contribute separately to the relational distortion within one complete description.
+Allowing at most $K$ groups gives nested unquantized approximation families as $K$ increases, since a finer table can reproduce a coarser one.
+Combining this flexibility with \cref{eq:block-description-cost} yields a concrete instance of the resource--distortion problem in \cref{eq:lossy-relational-compression}.

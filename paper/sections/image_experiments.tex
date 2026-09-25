@@ -1,0 +1,295 @@
+\subsection{Study 4: Reconstruction-defined image representations}
+\label{sec:flowers102-experiment}
+
+The fourth study demonstrates a different route by which a source requirement can shape a finite-codeword representation: pixel reconstruction acts through a joint spatial decoder rather than directly on same-code relations.
+Holding the 16-bit bottleneck architecture fixed, we vary marginal organization to examine how reconstruction quality and hard-code occupancy interact; a 32-bit run provides a separate capacity check.
+Unlike the analytical centroid realization, the synthesis transform jointly interprets neighboring spatial tokens, so no exact per-codeword centroid identity is assumed.
+Reconstruction MSE is the source fidelity, while hard collision entropy and effective code count describe representation organization.
+
+Binary and discrete image autoencoders have substantial precedents.
+Recurrent binary bottlenecks, VQ-VAE, soft-to-hard vector quantization, and learned transform codecs already combine reconstruction with constrained latent representations~\citep{toderici2016variable,vanDenOord2017neural,agustsson2017soft,balle2017end,balle2018variational}.
+Related variational representation-learning work explicitly studies the rate--distortion trade-off between compression and reconstruction accuracy~\citep{alemi2018fixing}.
+The Latent Bernoulli Autoencoder is a particularly close precedent: it trains an end-to-end reconstruction autoencoder with a hard $\{-1,+1\}$ latent obtained by zero thresholding and a straight-through gradient surrogate~\citep{fajtl2020latent}.
+Codebook-free alternatives include finite scalar quantization, lookup-free quantization, and binary spherical quantization~\citep{mentzer2024finite,yu2024language,zhao2025binary}, while token-prior regularization also precedes this study~\citep{zhang2023regularized}.
+The experiment isolates a collision-based organization mechanism in a purpose-limited architecture.
+
+\paragraph{Data and representation}
+Oxford Flowers102 contains 8189 images from 102 categories~\citep{nilsback2008automated}; labels are not used.
+For this reconstruction study, the official test split supplies the 6149 training images, the official validation split supplies 1020 validation images, and the official training split supplies 1020 test images.
+This nonstandard split is reported explicitly as part of the reconstruction protocol.
+Training uses image augmentation; validation and test use deterministic $256\times256$ center-crop preprocessing.
+
+The convolutional analysis transform produces $b$ logits at each position of a $32\times32$ latent grid.
+Each position is a spatial token with $b$ hard bits, and code statistics pool tokens across images and positions.
+The nominal raw latent capacity is $b/64$ bits per input pixel: 0.25 bpp for 16 bits and 0.50 bpp for 32 bits.
+These are fixed latent capacities before any entropy coding.
+
+The convolutional synthesis transform jointly interprets the spatial tokens to produce a sigmoid RGB output.
+GDN/IGDN follows established nonlinear transform-coding practice~\citep{balle2017end}.
+There are no encoder--decoder skip connections, so every reconstruction passes through the bottleneck.
+The encoder and decoder are shared across images; the per-image nominal latent bpp counts the latent bits, while model size belongs to the complete coding convention.
+
+At evaluation, bit $r$ at position $u$ is $h_r(x,u)=1$ if its logit $\ell_r(x,u)>0$, and $-1$ otherwise.
+Hard tokens therefore use the centered sign convention $\{-1,+1\}^b$, a relabeling of the binary alphabet $\{0,1\}^b$ in \cref{eq:factorized-code}.
+Centering the two states symmetrically about the zero threshold is convenient for the relaxation through which gradients are propagated during training, while hard equality and collision statistics are unchanged by the relabeling.
+Training uses the mean-group relaxation described in \ref{app:flowers102-details}.
+DiffPrune provides earlier work on deterministic approximate binary gates~\citep{shulman2020diffprune}.
+The training surrogate used here more directly adapts the sign-partitioned group-mean transformation of \citet{shulman2021exact}, originally introduced for binary network parameters, to spatial latent variables, and combines it with the concentration penalty of \cref{eq:concentration-reduction} rather than reproducing the original continuation formulation unchanged.
+Binary latent autoencoders and sign-based discrete tokenizers precede this study; to our knowledge, prior discrete-autoencoder work has not used this group-coupled relaxation to train a hard-sign latent bottleneck.
+
+\paragraph{Collision-based organization}
+The training loss has the form
+\begin{equation}
+\mathcal L=\mathcal L_{\mathrm{mse}}
++\lambda_{\mathrm{conc}}\mathcal L_{\mathrm{conc}}
++\lambda_{\mathrm{org}}\widetilde D_2.
+\label{eq:flowers-objective}
+\end{equation}
+The last term acts on a differentiable threshold-margin surrogate, while evaluation uses literal collisions of the hard sign tokens.
+Let $s_r>0$ be a detached per-channel RMS logit scale maintained by an exponential moving average.
+For gain $\gamma>0$, define
+\begin{equation}
+\eta_r(x,u):=\ell_r(x,u)/s_r,\qquad
+\tilde p_r(x,u)=\sigma(\gamma\eta_r(x,u)).
+\label{eq:flowers-threshold-probability}
+\end{equation}
+Equivalently, an independent logistic threshold perturbation $T_r$ with location zero and scale $s_r/\gamma$ gives $\tilde p_r=\Pr[T_r<\ell_r]$.
+Independence is across bit draws and independently encoded tokens; using one shared random threshold would define a different collision model.
+
+For two tokens, whole-code collision under these factorized probabilities is
+\begin{equation}
+\widetilde k_{ij}
+=\prod_{r=1}^b\left[\tilde p_{ir}\tilde p_{jr}+(1-\tilde p_{ir})(1-\tilde p_{jr})\right].
+\label{eq:flowers-threshold-collision}
+\end{equation}
+This is the factorized binary collision of \cref{eq:bit-collision}, instantiated for the code in \cref{eq:factorized-code} with the smooth threshold probabilities $\tilde p_r$.
+The sampled organization loss is
+\begin{equation}
+\widetilde D_2=b\log2+\log\widehat{\E}[\widetilde k_{ij}],
+\label{eq:flowers-separation}
+\end{equation}
+Since $K=2^b$, the population identities in \cref{eq:population-collision,eq:uniform-renyi} give $D_2(q_Z\|U_K)=b\log2+\log\E[k_\theta(X,X')]$.
+The implemented $\widetilde D_2$ replaces that population collision by the smooth threshold model and a finite minibatch pair estimate, so it is an optimization surrogate rather than the hard-code $H_2$ and $K_{\mathrm{eff}}$ statistics reported at evaluation.
+Because the logarithm is applied to a finite sampled collision estimate, $\widetilde D_2$ is not generally an unbiased estimator of the corresponding population R\'enyi divergence, nor is a finite-sample realization guaranteed to inherit its nonnegativity.
+The reported hard $H_2$ and $K_{\mathrm{eff}}$ are computed from the empirical distribution of complete hard spatial tokens pooled across images and positions in the evaluation split, using \cref{eq:collision-entropy,eq:effective-code-count}; this pooled token collection is the declared evaluation population.
+
+\paragraph{Ablations and results}
+The 16-bit sweep uses weights $0$, $10^{-7}$, $10^{-6}$, and $10^{-5}$, plus a 32-bit capacity run at $10^{-6}$.
+All settings use the same data split and one seed, 1337; validation hard MSE selects checkpoints.
+Large changes therefore illustrate mechanism while small differences remain statistically unresolved.
+Full checkpoint, MSE, MS-SSIM, and optimization settings are retained in \ref{app:flowers102-details}.
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{lrrrrr}
+\toprule
+Setting & Bits & Nominal bpp & PSNR & Hard $H_2$ & $K_{\mathrm{eff}}$ \\
+\midrule
+No organization & 16 & 0.25 & 19.86 & 1.98 & 7.2 \\
+Weaker, $10^{-7}$ & 16 & 0.25 & 24.36 & 7.00 & 1\,098 \\
+Baseline, $10^{-6}$ & 16 & 0.25 & 24.83 & 9.50 & 13\,388 \\
+Stronger, $10^{-5}$ & 16 & 0.25 & 24.56 & 10.29 & 29\,569 \\
+Capacity, $10^{-6}$ & 32 & 0.50 & 25.88 & 12.46 & 257\,753 \\
+\bottomrule
+\end{tabular}
+\caption{Flowers102 hard-code reconstruction and organization at validation-selected checkpoints. PSNR is in dB and $H_2$ in nats. Each row is one run. The nominal bpp describes raw latent bits before entropy coding.}
+\label{tab:flowers102-results}
+\end{table}
+
+Without organization, reconstruction learns a nontrivial partition but uses only 38 distinct codewords, with effective count about 7.2, hard collision $1.38\times10^{-1}$, and 19.86 dB PSNR.
+Thus reconstruction supplies a reason to distinguish inputs while allowing concentrated use of the available 16-bit alphabet.
+Several bit channels become saturated in this run.
+
+A weight of $10^{-7}$ raises PSNR to 24.36 dB and effective count to about $1.1\times10^3$.
+The $10^{-6}$ setting gives the best 16-bit reconstruction among these runs, 24.83 dB and 0.896 MS-SSIM, with effective count 13\,388.
+Increasing the weight to $10^{-5}$ further broadens occupancy to 29\,569 effective codes while PSNR decreases to 24.56 dB.
+The few-tenths-of-a-decibel difference is unresolved in this single-seed study, while the sweep suggests that utilization can continue increasing after reconstruction quality plateaus.
+\Cref{fig:flowers102-dynamics} shows how reconstruction and hard-code utilization evolve across the organization sweep.
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{flowers102_ablation_dynamics.png}
+\caption{Validation dynamics of the image reconstruction ablations. Utilization is measured from hard spatial tokens; smooth probabilities supply the training surrogate. The zero-weight run is highly concentrated; larger weights broaden occupancy. The 32-bit run has a larger nominal bottleneck capacity.}
+\label{fig:flowers102-dynamics}
+\end{figure}
+
+Support size and effective occupancy tell different stories.
+The baseline and stronger 16-bit settings activate 65\,208 and 65\,528 of 65\,536 possible words, but their effective counts are only 13\,388 and 29\,569.
+The 32-bit run improves reconstruction to 25.88 dB and 0.920 MS-SSIM with effective count about $2.58\times10^5$.
+It serves as a capacity check in which the nominal bpp, code space, and uniform-reference target all change.
+Empirical occupancy also remains sample dependent, especially in a very large alphabet.
+\Cref{fig:flowers102-16bit-tradeoff} summarizes the four fixed-capacity 16-bit operating points.
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.72\linewidth]{flowers102_16bit_tradeoff.png}
+\caption{The four 16-bit test operating points. Organization initially improves both effective code use and PSNR; beyond the baseline it increases utilization while reconstruction slightly worsens. The single-seed operating points provide a descriptive trajectory rather than a statistically resolved frontier.}
+\label{fig:flowers102-16bit-tradeoff}
+\end{figure}
+
+Qualitative hard-code reconstructions are retained in \cref{fig:flowers102-reconstruction-examples}.
+Taken together, reconstruction can train a hard finite representation through a joint decoder without ensuring broad alphabet use; marginal organization changes that use separately, while token collision remains an organization statistic rather than the reconstruction fidelity itself.
+The 32-bit run separately probes increased nominal capacity.
+
+\subsection{Study 5: Teacher-defined relations without reconstruction}
+\label{sec:flowers102-teacher-experiment}
+
+The fifth study asks whether an externally supplied source relation can organize a finite hard representation without reconstruction or a marginal-organization penalty.
+A frozen visual teacher defines baseline-relative favored and disfavored relations among spatial patches, and an independent student encoder is trained only through pair-specific whole-code collision.
+Hard relation-conditioned collision provides the primary evaluation.
+A decoder fitted only after freezing the encoder supplies a secondary cross-fidelity probe of recoverable image structure.
+
+Transferring relations rather than individual features is established in relational and similarity-preserving distillation~\citep{park2019relational,tung2019similarity}.
+Dense visual precedents include STEGO's distillation of feature correspondences, TokenCut's use of transformer patch affinities, and DeepCut's graph clustering of pretrained image features~\citep{hamilton2022unsupervised,wang2022selfsupervised,aflalo2023deepcut}.
+Vector-quantized teacher features also appear in BEiT v2~\citep{peng2022beitv2}.
+The selected realization combines an independent image encoder, cross-image baseline-relative relations, and a whole-code collision objective.
+
+\paragraph{Source relation and student}
+The data split and image preprocessing match those of \cref{sec:flowers102-experiment}.
+A frozen DINO ViT-S/8 teacher~\citep{caron2021emerging} sees the same $256\times256$ image crop as the student, with the teacher's input normalization.
+Its final normalized spatial tokens form a $32\times32$ grid, matching the student's latent grid.
+Let $e_i$ be the frozen teacher embedding of spatial patch token $i$.
+
+The student uses the same convolutional analysis transform as Study 4, with $b=16$ logits per spatial position.
+Hard evaluation uses zero-threshold signs.
+During representation learning,
+\begin{equation}
+p_r(i)=\sigma(\ell_r(i)/\tau_c),\qquad \tau_c=0.25.
+\end{equation}
+There is no mean-group relaxation, concentration term, marginal organization penalty, entropy model, or reconstruction decoder at this stage.
+
+\paragraph{One teacher relation, two relational roles}
+Each minibatch supplies a bounded sample of spatial tokens, and valid candidates for token $i$ form $\mathcal N_i$.
+Self-pairs and same-image pairs are excluded in the reported run.
+For teacher temperature $\tau_T=0.1$, define
+\begin{equation}
+S^{\mathrm{patch}}_{ij}
+=\frac{\exp(e_i^\top e_j/\tau_T)}
+{\sum_{j'\in\mathcal N_i}\exp(e_i^\top e_{j'}/\tau_T)},
+\qquad
+S_{\mathrm{bg},ij}=\nu_i=|\mathcal N_i|^{-1}.
+\label{eq:teacher-row-relation}
+\end{equation}
+The teacher mapping and relation-construction rule are fixed, but $S^{\mathrm{patch}}$ is row-normalized within each sampled candidate set and is therefore not one immutable affinity matrix over the full dataset.
+The source-side baseline is uniform over valid candidates.
+The resulting favored and disfavored pair weights are detached constants during optimization:
+\begin{equation}
+S_{+,ij}=[S^{\mathrm{patch}}_{ij}-S_{\mathrm{bg},ij}]_+,\qquad
+S_{-,ij}=[S_{\mathrm{bg},ij}-S^{\mathrm{patch}}_{ij}]_+.
+\label{eq:teacher-signed-weights}
+\end{equation}
+Thus a single teacher relation supplies both favored and disfavored collisions through the baseline-relative construction of \cref{eq:signed-relation}.
+
+The cosine and candidate mask are symmetric, but row normalization makes $S^{\mathrm{patch}}$ directional.
+The student collision is symmetric and both directions are included.
+Accordingly, each side of the loss aggregates the corresponding directional weight masses on an unordered pair.
+This aggregation is performed separately for favored and disfavored weights and can differ from thresholding a single symmetrized signed relation.
+
+The differentiable whole-code probability is
+\begin{equation}
+\widetilde k_{ij}=\prod_{r=1}^b[p_r(i)p_r(j)+(1-p_r(i))(1-p_r(j))].
+\end{equation}
+This is the factorized whole-code collision of \cref{eq:bit-collision}, evaluated using the student's smooth Bernoulli probabilities.
+The representation-side neutral collision level is the population collision induced by the uniform codeword reference $U_K$:
+\[
+\sum_z U_K(z)^2=\frac{1}{K}=2^{-b}.
+\]
+Define
+\begin{equation}
+\delta_{ij}:=\operatorname{logit}(\widetilde k_{ij})-\operatorname{logit}(1/K).
+\label{eq:teacher-centered-margin}
+\end{equation}
+The implementation clips the probability away from zero and one before evaluating the logit; the numerical convention is described in \ref{app:flowers102-teacher-details}.
+The source baseline $S_{\mathrm{bg},ij}$ determines the favored and disfavored requirements, while $1/K$ centers the representation-side margin.
+The uniform distribution $U_K$ is used here only to define this neutral whole-code collision level: the objective does not match the aggregate distribution $q_Z$ to $U_K$ and has no $\mathcal L_{\mathrm{org}}$ term.
+
+The two sides of the objective are
+\begin{equation}
+\begin{aligned}
+\mathcal L_{\mathrm{align}}
+&=\frac{\sum_{ij}S_{+,ij}\operatorname{softplus}(-\delta_{ij})}{\sum_{ij}S_{+,ij}},\\
+\mathcal L_{\mathrm{sep}}^{\mathrm{rel}}
+&=\frac{\sum_{ij}S_{-,ij}\operatorname{softplus}(\delta_{ij})}{\sum_{ij}S_{-,ij}},\\
+\mathcal L_{\mathrm{teacher}}
+&=\tfrac12\left(\mathcal L_{\mathrm{align}}+\mathcal L_{\mathrm{sep}}^{\mathrm{rel}}\right),
+\end{aligned}
+\label{eq:dino-teacher-loss}
+\end{equation}
+with zero-mass sides omitted from the average and zero loss when neither side is active.
+Favored relations encourage collision above the reference, while disfavored relations encourage it below the reference.
+The objective preserves baseline-relative distinctions without reconstructing teacher cosine values.
+
+\paragraph{Evaluation and results}
+The representation checkpoint is selected by validation teacher loss.
+Hard sign tokens provide the reported occupancy statistics and relation-conditioned collision rates.
+Let $c(i)\in\mathcal Z$ denote the complete hard codeword assigned to patch token $i$ by zero-thresholding the student logits.
+The relation-conditioned collision rates are
+\[
+\widehat\kappa_+
+=\frac{\sum_{ij}S_{+,ij}\ind[c(i)=c(j)]}{\sum_{ij}S_{+,ij}},
+\qquad
+\widehat\kappa_-
+=\frac{\sum_{ij}S_{-,ij}\ind[c(i)=c(j)]}{\sum_{ij}S_{-,ij}}.
+\]
+The pooled empirical hard-code collision is
+\[
+\widehat\kappa_{\mathrm{pop}}
+=\sum_z\widehat q_Z(z)^2
+=e^{-\widehat H_2}.
+\]
+Favored-pair enrichment and disfavored-pair suppression are, respectively,
+\[
+\frac{\widehat\kappa_+}{\widehat\kappa_{\mathrm{pop}}},
+\qquad
+1-\frac{\widehat\kappa_-}{\widehat\kappa_{\mathrm{pop}}}.
+\]
+These ratios use the pooled empirical hard-code collision as their baseline and are descriptive rather than calibrated against a candidate-matched null.
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{lrr}
+\toprule
+Metric & Validation & Test \\
+\midrule
+Representation epoch & \multicolumn{2}{c}{146} \\
+Teacher loss & 0.389 & 0.389 \\
+Favored-pair hard collision & $1.35\times10^{-2}$ & $1.29\times10^{-2}$ \\
+Disfavored-pair hard collision & $1.37\times10^{-4}$ & $1.47\times10^{-4}$ \\
+Aggregate hard collision & $1.03\times10^{-3}$ & $1.04\times10^{-3}$ \\
+Favored-pair enrichment & 13.13 & 12.40 \\
+Disfavored-pair suppression & 0.866 & 0.858 \\
+Hard $H_2$ (nats) & 6.88 & 6.87 \\
+$K_{\mathrm{eff}}$ & 974 & 965 \\
+Active hard words & 43\,036 & 43\,028 \\
+\midrule
+Secondary decoder epoch & \multicolumn{2}{c}{140} \\
+Decoder MSE & 0.01134 & 0.01121 \\
+Decoder PSNR (dB) & 19.45 & 19.50 \\
+Decoder MS-SSIM & 0.714 & 0.718 \\
+\bottomrule
+\end{tabular}
+\caption{DINO-defined relational learning on Flowers102. Representation and secondary decoder checkpoints use separate validation criteria. The encoder is frozen during decoder training. The study uses one seed.}
+\label{tab:flowers102-teacher-results}
+\end{table}
+
+On test images, teacher-favored pairs collide with probability $1.29\times10^{-2}$, compared with aggregate collision $1.04\times10^{-3}$.
+Teacher-disfavored pairs collide with probability $1.47\times10^{-4}$.
+The corresponding enrichment is $12.4\times$ and suppression is 85.8\%.
+The weighted mean teacher cosine is 0.579 on favored relations and 0.311 on disfavored relations; both are positive, and their separation confirms that the baseline-relative split behaves as intended.
+
+The hard representation has about 965 collision-effective words across 43\,028 active words, reflecting broad support with concentrated occupancy.
+The result shows that pair-specific alignment and relational separation can organize a noncollapsed code without an explicit marginal entropy penalty.
+The evaluation covers the declared relational distinctions and their hard-collision diagnostics rather than numerical reconstruction of the full teacher geometry.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.68\linewidth]{flowers102_teacher_graph_dynamics.png}
+\caption{Validation dynamics of the baseline-relative teacher study. Hard collisions on favored pairs are enriched and those on disfavored pairs are suppressed relative to the pooled occupancy baseline as the code develops. The secondary decoder curve belongs to a separate stage after the encoder is frozen.}
+\label{fig:flowers102-teacher-dynamics}
+\end{figure}
+
+After representation learning, a decoder with the synthesis-transform form of Study 4 is trained on frozen hard codes and selected by validation MSE.
+It achieves test PSNR 19.50 dB and MS-SSIM 0.718.
+This shows that the retained representation supports nontrivial image reconstruction even though pixel fidelity did not shape it directly.
+In the absence of random-encoder and shuffled-teacher decoder controls, the result serves as a compatibility probe between two fidelities rather than a causal attribution or comparison with the reconstruction-trained codec.
+Qualitative examples are retained in \cref{fig:flowers102-teacher-reconstruction-examples}.
+
+The learned code remains noncollapsed while placing substantially more collisions on teacher-favored pairs and fewer on teacher-disfavored pairs than the pooled occupancy baseline, demonstrating that pair-specific relational requirements can directly organize finite-codeword equality without a decoder in representation learning.

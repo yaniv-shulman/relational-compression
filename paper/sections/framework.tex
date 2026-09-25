@@ -1,0 +1,310 @@
+\section{Introduction}
+\label{sec:introduction}
+
+Compression asks which distinctions in a source should survive a constrained representation and which can be discarded.
+In a reconstruction problem, this choice is expressed through the cost of reproducing the source inaccurately: a finite description is useful when it preserves the features that matter at an acceptable cost~\citep{gray1998quantization,cover2006elements}.
+For many sources, however, the structure of interest lies in relationships among elements.
+A graph specifies connections among vertices, a distance or similarity matrix records geometry among observations, and a teacher representation induces affinities among examples.
+Preserving these relationships gives a natural compression question: how can their structure be represented more economically while retaining the distinctions selected by a fidelity criterion?
+
+Several seemingly unrelated methods approach this question, some explicitly and others through representation learning.
+Graph summaries retain reduced descriptions of adjacency structure~\citep{riondato2017graph}; similarity-preserving hashing represents observations by compact codes~\citep{weiss2008spectral}; and relational distillation transfers relationships from teacher to student representations~\citep{park2019relational,tung2019similarity}.
+Their descriptions, fidelity criteria, and constrained resources differ, but they can be examined through the same set of choices: the source relation, the retained description, the relation recovered from it, the fidelity of that recovery, and its resource cost.
+Making these choices explicit separates representation, decoder, fidelity, and resource: the same retained assignments can support different relational decoders, while similar nominal capacity or fidelity under one criterion need not imply the same code organization or preservation under another.
+
+We formulate \emph{relational compression} in the classical source--description--reconstruction sense, with relational structure as the fidelity-bearing source content.
+For a fixed or shared carrier set, its basic interface is
+\begin{equation}
+S\longrightarrow m_S\longrightarrow\widetilde S,
+\label{eq:relational-interface-intro}
+\end{equation}
+where $S$ is the source relation, $m_S$ is its retained description, and $\widetilde S$ is the relation reconstructed or evaluated from that description.
+A relational distortion specifies how preservation of source structure is assessed, while a resource functional measures the cost of retaining it.
+Together, these components turn relational preservation into a constrained compression problem: what relational fidelity can be retained at a given description resource?
+Specific instances of this pattern occur across established literatures, including explicit relational and graph-compression formulations discussed in \cref{sec:methods-map}.
+The contribution here is to make the source relation, retained description, reconstructed or evaluated relation, fidelity criterion, and resource convention explicit as a common cross-domain interface while retaining the assumptions specific to each construction.
+
+Within this framework, we develop finite-codeword equality as a representation mechanism.
+A finite assignment groups elements according to their codewords; probabilistic assignments replace hard equality by the probability of a same-codeword collision.
+This gives a setting in which to study how a source relation shapes the representation through alignment and separation, and how aggregate codeword use describes its organization.
+The main contributions are:
+\begin{itemize}
+    \item \textbf{A framework for relational compression.}
+    We formalize relational compression as a source--description--reconstruction problem in which relational structure is the fidelity-bearing content.
+    The framework explicitly separates the source relation, retained description, reconstructed or evaluated relation, relational fidelity criterion, constrained resource, and shared context.
+    This provides a common interface for formulating and comparing relation-preserving methods across domains while retaining the assumptions specific to each construction.
+
+    \item \textbf{Finite-codeword collision as a reusable realization.}
+    Within this framework, we develop same-codeword collision as a general representation-side mechanism for finite representations.
+    The resulting construction connects pair-specific alignment and separation, aggregate R\'enyi-2 occupancy, reference-weighted affinity, and positive-spherical geometry, and exposes exact correspondences with squared-Euclidean centroid reconstruction and normalized graph association and cut.
+    Controlled synthetic, graph, and image studies illustrate how the same collision machinery can be instantiated under different relational and reconstruction-defined fidelity requirements.
+\end{itemize}
+
+The remainder of the paper is organized as follows.
+\Cref{sec:relational-compression-framework} defines the relational-compression problem and its general fidelity constructions.
+\Cref{sec:methods-map} presents the method mappings and worked summary example.
+\Cref{sec:collision-geometry,sec:collision-entropy,sec:alignment-separation} develop finite-codeword collision geometry and its objectives, followed by selected realizations in \cref{sec:relational-distortion-realizations} and experimental studies in \cref{sec:experiments}.
+
+
+\section{A Framework for Relational Compression}
+\label{sec:relational-compression-framework}
+
+Relational compression requires identifying the relational structure to preserve, the description retained about it, how that description is decoded or evaluated, and how fidelity is traded against resource.
+This section formalizes those components and introduces pairwise, content-based, and operator-based fidelities.
+We begin with a simple block-valued summary example to show how they fit together.
+
+Let $V$ be a finite carrier, let $S$ be a pairwise relation on $V$, let $c:V\to\{1,\ldots,K\}$ assign each element to a group, and let $\Xi=(\Xi_{ab})_{a,b=1}^K$ be a $K\times K$ table of reproduction values.
+The retained description $m_S=(c,\Xi)$ defines the block-valued relational summary
+\begin{equation}
+\widetilde S(v,w)=\Xi_{c(v),c(w)}.
+\label{eq:block-valued-relational-summary}
+\end{equation}
+The assignments determine which pairs share a reproduction value, while the table determines the value reproduced for those pairs.
+A fidelity criterion measures how well $\widetilde S$ preserves $S$, and a resource measure accounts for the retained assignments and table values.
+The same finite assignments could support a different decoder, so they do not by themselves uniquely determine the reconstructed relation.
+This is a compression formulation because the full relation is represented through the constrained description $m_S=(c,\Xi)$, trading the resource required to retain that description against the fidelity of the relation reconstructed from it by a decoder.
+
+\subsection{Relational sources}
+
+A relational source consists of elements together with structure defined among them.
+For a graph, the carrier elements are vertices and the relation records adjacency or edge weights; for a collection of observations, the carrier elements are the observations and the relation may record pairwise distances, similarities, or neighborhood structure.
+Separating the elements from their relation identifies the content whose preservation will be assessed.
+
+Let $V$ be a finite carrier set.
+A pairwise relational object is
+\begin{equation}
+\mathfrak R=(V,S),
+\qquad
+S:V\times V\to\mathcal Y,
+\end{equation}
+where $S(v,w)$ is the relation value assigned to the pair $(v,w)$.
+The codomain $\mathcal Y$ specifies the type of relation value, and the admissible class $\mathcal S_V\subseteq\mathcal Y^{V\times V}$ specifies its structural properties, such as symmetry or nonnegativity.
+Reconstructed relations belong to a class $\widehat{\mathcal S}_V\subseteq\widehat{\mathcal Y}^{V\times V}$.
+Thus a reconstructed object is $\widetilde{\mathfrak R}=(V,\widetilde S)$, with the same carrier and a reproduced relation.
+
+We treat the carrier identities as fixed or shared between encoder and decoder.
+The compression target is therefore $S$ conditional on $V$.
+Additional shared context $C$ may contain a reproduction alphabet, a carrier ordering, or model parameters used across source objects.
+The retained description contains the source-specific information required for reconstruction beyond this context.
+We suppress $C$ in the notation when it is fixed.
+
+In learned realizations, an element $v$ may be presented to the encoder through an observation $x_v$, with $X_V=(x_v)_{v\in V}$ denoting the collection of inputs.
+These observations provide the information from which the retained description is constructed, while the relational structure $S$ specifies the relationships among carrier elements that are to be represented.
+For example, a graph encoder may receive node features $x_v$ while the source relation $S$ is the graph adjacency or edge-weight structure.
+The same per-object formulation applies to datasets of relational objects $(V_i,S_i)$ with varying carrier sets.
+
+\subsection{Descriptions and reconstruction}
+
+The block-valued summary above already separates the stored description from the relation reconstructed from it.
+We now formalize that distinction.
+
+A compression scheme specifies a description space $\mathcal M_V$, an encoder $\mathsf{Enc}_V$, and a decoder $\mathsf{Dec}_V:\mathcal M_V\to\widehat{\mathcal S}_V$.
+For a source relation $S$, write
+\begin{equation}
+m_S=\mathsf{Enc}_V(S),
+\qquad
+\widetilde S=\mathsf{Dec}_V(m_S).
+\label{eq:relational-reconstruction-interface}
+\end{equation}
+Additional encoder-side observations can be included through $\mathsf{Enc}_V(S,X_V)$.
+The description may contain stored relation values, element assignments, coordinates, or parameters of a relational reconstruction rule.
+The decoder can materialize $\widetilde S$ or evaluate its entries on demand through $(m_S,v,w)\mapsto\widetilde S(v,w)$.
+Either form gives a relation determined by the description and shared context.
+
+With a common source and reconstruction codomain, a scheme is \emph{lossless} on $\mathcal S_V$ when
+\begin{equation}
+\mathsf{Dec}_V(\mathsf{Enc}_V(S))=S
+\qquad
+\text{for every }S\in\mathcal S_V.
+\label{eq:lossless-relational-compression}
+\end{equation}
+In the lossy setting, the reconstructed relation approximates the source according to a specified fidelity criterion.
+For the block-valued summary in \cref{eq:block-valued-relational-summary}, the table reproduces exactly those source relations that are constant on its evaluated blocks; variation within a block becomes approximation error.
+The description and decoder therefore determine the family of relational structures available for reconstruction.
+
+This is the familiar encoder--description--decoder interface of classical compression applied to a relational source~\citep{cover2006elements}.
+\Cref{tab:framework-components} summarizes its components together with the fidelity and resource measures introduced next.
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.12}
+\setlength{\extrarowheight}{1pt}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{0.18\linewidth}
+                            >{\raggedright\arraybackslash}X
+                            >{\raggedright\arraybackslash}X}
+\toprule
+Role & Classical compression & Relational compression \\
+\midrule
+Source
+& Source object $x$
+& Relational object $(V,S)$, with $V$ fixed or shared \\
+Description
+& Retained message $m$
+& Retained relational description $m_S$ \\
+Reconstruction
+& Reproduced object $\widehat x$
+& Reconstructed relation $\widetilde S$ \\
+Decoder
+& Rule mapping $m$ to $\widehat x$
+& Rule constructing $\widetilde S$ or evaluating its entries \\
+Fidelity
+& Distortion $d(x,\widehat x)$
+& Relational distortion $\Delta_V(S,\widetilde S)$ \\
+Resource
+& Cost of the description
+& Cost $\Omega(m_S)$ in specified units \\
+Shared context
+& Information available to both sides
+& Carrier set and shared context $C$ \\
+\bottomrule
+\end{tabularx}
+\caption{The compression interface for ordinary and relational source objects.}
+\label{tab:framework-components}
+\end{table}
+
+Structured descriptions can determine many pair relations from comparatively few retained components; subsequent sections instantiate this principle with block summaries and finite codes.
+
+\subsection{Resources and relational fidelity}
+\label{sec:relational-distortion}
+
+Given a description and decoder, compression becomes a trade-off between description cost and relational distortion: the resource measure records the former and the fidelity criterion the latter.
+
+A resource functional
+\begin{equation}
+\Omega:\mathcal M_V\to\R_{\ge0}
+\end{equation}
+measures description cost in specified units, such as encoded bits, stored relation entries, or scalar coordinates.
+A relational distortion
+\begin{equation}
+\Delta_V:\mathcal S_V\times\widehat{\mathcal S}_V\to\R_{\ge0}
+\end{equation}
+measures distortion of the source relation according to the chosen fidelity criterion.
+Whenever exact source reconstruction is admissible, we take $\Delta_V(S,S)=0$.
+More generally, zero distortion means that the chosen fidelity criterion assigns no distortion to the reconstruction; it need not imply literal equality between $S$ and $\widetilde S$.
+The decoder determines $\widetilde S$ from the retained description and any shared context $C$, while fidelity is assessed against the source $S$.
+Thus $\Delta_V$ specifies how well the reconstructed or evaluated relation preserves the source according to the declared criterion.
+A training objective may equal this distortion, include it as one term, or optimize a surrogate for it.
+
+For a source relation $S$, the best distortion attainable within the declared description space and decoder under a resource budget $B$ is
+\begin{equation}
+D_V^\star(B;S)
+=
+\inf_{\substack{m\in\mathcal M_V\\\Omega(m)\le B}}
+\Delta_V\bigl(S,\mathsf{Dec}_V(m)\bigr).
+\label{eq:lossy-relational-compression}
+\end{equation}
+An encoder optimized for this criterion selects, or approximates, a minimizing admissible description for each source relation.
+As the budget increases, the feasible set expands, so the best attainable distortion is nonincreasing.
+Thus $D_V^\star(B;S)$ describes the resource--distortion trade-off for the source: how much relational distortion remains at each available description budget.
+
+The definition of $\Delta_V$ is deliberately general.
+We next give several concrete fidelity constructions used in subsequent sections, beginning with a pairwise criterion.
+
+\subsection{Pairwise relational fidelity}
+
+For pairwise relational sources, a natural construction is to evaluate relation values locally and average their distortion over a declared distribution of carrier pairs:
+\begin{equation}
+\Delta_V(S,\widetilde S)
+=
+\E_{(\mathsf V,\mathsf V')\sim P_{\mathrm{pair}}}
+\bigl[d_{\mathrm{rel}}(S(\mathsf V,\mathsf V'),\widetilde S(\mathsf V,\mathsf V'))\bigr].
+\label{eq:pairwise-relational-fidelity}
+\end{equation}
+Here $P_{\mathrm{pair}}$ is a probability distribution on carrier pairs, $\mathsf V,\mathsf V'$ denote a random pair drawn according to this distribution, and $d_{\mathrm{rel}}:\mathcal Y\times\widehat{\mathcal Y}\to\R_{\ge0}$ is a local relation-value distortion function.
+Uniform pair weights with squared error give average relation-value reconstruction error.
+Pair distributions concentrated on graph edges, neighboring observations, or selected queries emphasize those portions of the source instead.
+Thus $P_{\mathrm{pair}}$ determines which source relations receive weight, while $d_{\mathrm{rel}}$ determines how relational reconstruction error is measured locally.
+
+This construction is useful when relational fidelity is naturally assessed through individual relation values.
+Other applications evaluate larger-scale structural properties of the relation; we consider two such constructions next.
+
+\subsection{Selected structural fidelity constructions}
+
+Depending on which properties of the source relation are important, a criterion may instead evaluate retained structural content, the action of the relation on a family of probes, or another source-dependent property.
+We develop two related constructions here because they are used in the graph realizations later in the paper, while other source-dependent fidelity constructions remain possible.
+
+\paragraph{Content-based fidelity}
+
+Some fidelity criteria are naturally expressed in terms of relational content retained during compression.
+For example, deleting graph edges can remove direct connections and the paths supported by them.
+A content functional assigns a value to the structure that remains, allowing fidelity to be measured by the decrease in that value.
+
+Let $\preceq_{\mathrm{rel}}$ be a compatible, composable simplification relation on the family under consideration.
+A nonnegative structural-content functional $\mathcal I$ is monotone when
+\begin{equation}
+S_2\preceq_{\mathrm{rel}}S_1
+\quad\Longrightarrow\quad
+\mathcal I(S_2)\le\mathcal I(S_1).
+\label{eq:relational-content-monotone}
+\end{equation}
+For $\widetilde S\preceq_{\mathrm{rel}}S$, define
+\begin{equation}
+D_{\mathcal I}(S,\widetilde S)
+=\mathcal I(S)-\mathcal I(\widetilde S).
+\label{eq:relational-content-distortion}
+\end{equation}
+The resulting distortion is nonnegative and increases or stays constant along a sequence of admissible simplifications.
+For $\mathcal I(S)>0$, the normalized version is
+\begin{equation}
+\overline D_{\mathcal I}(S,\widetilde S)
+=1-\frac{\mathcal I(\widetilde S)}{\mathcal I(S)}.
+\label{eq:normalized-relational-content-distortion}
+\end{equation}
+It measures the fraction of source content lost: exact retention gives zero, and a null reconstruction with zero content gives one.
+
+Choosing $\mathcal I$ specifies the structural property to be preserved.
+For example, total retained edge weight gives direct relation distortion, while path- or walk-based content values connections supported over several steps, and nonnegative weighted sums combine several such properties.
+The graph realizations later in the paper use this construction to connect simple relational deletions with their effects on source structure.
+
+\paragraph{Operator-based fidelity}
+
+Given a fixed carrier $V$, we use a relation-derived operator to mean a linear map $T_S:\R^V\to\R^V$ determined by the source relation $S$.
+For a graph, familiar examples include adjacency, transition, and Laplacian operators; the symmetric fidelity construction below and the graph realizations later in the paper primarily use the Laplacian.
+A relation can also be evaluated through the behavior it supports on its carrier.
+For a graph, a signal assigns a value to each vertex, and the graph Laplacian measures how that signal varies across connections~\citep{shuman2013emerging}.
+Such signals act as probes: comparing their energy before and after compression measures which aspects of the source geometry have been retained.
+This leads to a fidelity construction that will supply several of the graph objectives used later.
+
+Let $T_S$ and $T_{\widetilde S}$ be finite-dimensional symmetric operators on signals over $V$, and suppose
+\begin{equation}
+0\preceq T_{\widetilde S}\preceq T_S,
+\label{eq:operator-compression-order}
+\end{equation}
+where $\preceq$ is the Loewner order.
+For a fixed probe $f$, the removed energy is
+\begin{equation}
+D_f(S,\widetilde S)
+=f^\top(T_S-T_{\widetilde S})f.
+\label{eq:operator-probe-distortion}
+\end{equation}
+The operator order ensures that this quantity is nonnegative.
+It measures fidelity along the particular signal direction selected by $f$.
+
+To evaluate a family of directions, let $F$ be a random probe with finite second moment $M=\E[FF^\top]$.
+The average distortion is
+\begin{equation}
+\begin{aligned}
+D_M(S,\widetilde S)
+&=\E\bigl[F^\top(T_S-T_{\widetilde S})F\bigr]\\
+&=\operatorname{tr}\bigl[(T_S-T_{\widetilde S})M\bigr].
+\end{aligned}
+\label{eq:operator-expected-distortion}
+\end{equation}
+The matrix $M$ determines how signal directions are weighted.
+A rank-one choice $M=ff^\top$ recovers the fixed-probe distortion, while $M=I$ weights coordinate directions equally.
+Source-derived choices can emphasize modes of the original relation; these are computed from that source and held fixed while candidate reconstructions are compared.
+For fixed $M\succeq0$, the average operator distortion is itself a content-based distortion: defining $\mathcal I_M(S)=\operatorname{tr}(T_SM)$ makes \cref{eq:operator-expected-distortion} exactly the corresponding content difference.
+The operator viewpoint remains useful because it provides a structured way to specify which signal directions should be preserved and supports, for example, a worst-case criterion that asks how much relative energy can be lost in any source-supported direction:
+\begin{equation}
+D_{\mathrm{wc}}(S,\widetilde S)
+=\sup_{f:f^\top T_Sf>0}
+\frac{f^\top(T_S-T_{\widetilde S})f}{f^\top T_Sf}.
+\label{eq:operator-worst-case-distortion}
+\end{equation}
+Under \cref{eq:operator-compression-order}, this lies in $[0,1]$ for $T_S\ne0$; we set it to zero when $T_S=0$.
+The average criterion expresses fidelity under a chosen probe distribution, while the worst-case criterion measures the largest relative distortion.
+Spectral sparsification gives a related all-probe graph objective, using reweighted sparse reconstructions to preserve Laplacian quadratic forms across signal directions~\citep{spielman2011effective}.
+These constructions illustrate several ways in which $\Delta_V$ can be specified.
+Other fidelity criteria may be used when different relational properties are important.

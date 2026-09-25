@@ -1,0 +1,347 @@
+\section{Experimental Realizations of the Framework}
+\label{sec:experiments}
+
+The preceding theory leaves several components deliberately modular.
+The five studies below vary those components while keeping finite-codeword assignments as the common representation family; \cref{tab:experimental-framework-summary} summarizes the roles used in the experiments.
+Code for the experimental studies is available at \url{https://github.com/yaniv-shulman/relational-compression}.
+
+\begin{table}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2.5pt}
+\renewcommand{\arraystretch}{1.08}
+\setlength{\extrarowheight}{1pt}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{0.13\linewidth}
+                            >{\raggedright\arraybackslash}p{0.18\linewidth}
+                            >{\raggedright\arraybackslash}p{0.25\linewidth}
+                            >{\raggedright\arraybackslash}X}
+\toprule
+Role & Classical compression & Relational compression & Finite-codeword realization used here \\
+\midrule
+Source / fidelity-bearing content
+& Source object $x$ and the content reconstructed from it
+& Relational object $(V,S)$, with $S$ the fidelity-bearing structure conditional on shared $V$
+& Explicit point geometry, graph structure, or teacher-defined relations; Study 4 instead uses source-image reconstruction to constrain the finite representation through a joint spatial decoder \\
+Encoder-side observations
+& Usually the source observation itself
+& $X_V=(x_v)_{v\in V}$ when encoder-side observations are present
+& Point coordinates, graph or node structural features, or image pixels mapped to finite assignments \\
+Retained description
+& Retained message or code $m$
+& Retained relational description $m_S$
+& The source-specific $m_S$ comprises declared finite assignments, codes, or tokens plus any required auxiliary payload; $q_\theta(\cdot\mid x)$ is an optimization parameterization where applicable \\
+Reconstruction / evaluation
+& Reconstructed source $\widehat x$
+& $\widetilde S=\mathsf{Dec}_V(m_S)$, materialized or evaluated on demand
+& Same-code equality or collision may supply the evaluated relation directly or feed a richer structural or reconstruction decoder \\
+Primitive representation-side relation
+& No universal analogue is prescribed
+& Depends on the chosen description mechanism
+& Hard equality $\ind[c_\theta(x)=c_\theta(x')]$ and soft collision $k_\theta(x,x')$ \\
+Fidelity
+& Distortion $d(x,\widehat x)$
+& Relational distortion $\Delta_V(S,\widetilde S)$
+& Study-specific source fidelity acting on or through collision, including centroid/pairwise, graph, normalized-cut, reconstruction-defined, and signed-teacher criteria \\
+Resource / representation constraint
+& Encoded bits, rate, alphabet size, or another declared resource
+& Description cost $\Omega(m_S)$
+& Alphabet bound $K$, binary width, or nominal latent capacity constrain the declared description convention but need not equal the complete resource $\Omega(m_S)$; any additional retained payload must also be counted \\
+Realized organization
+& Realized code distribution or entropy under the coding convention
+& Separate from description resource unless explicitly incorporated into $\Omega$
+& $H_2(q_Z)$, $K_{\mathrm{eff}}$, and $D_2(q_Z\|r)$ when used \\
+Shared context
+& Codebook or model information available to encoder and decoder
+& Shared carrier $V$ and context $C$, including reusable model parameters
+& Shared neural encoder or decoder parameters and fixed conventions not included in each source-specific retained description \\
+\bottomrule
+\end{tabularx}
+\caption{Summary of the compression roles used to interpret the experimental realizations. The final column specializes the general relational-compression interface to the finite-codeword constructions used in this paper. Realized codeword organization is reported separately from operational coding rate unless the declared resource convention identifies them.}
+\label{tab:experimental-framework-summary}
+\end{table}
+
+The five studies provide a compact progression through these roles.
+Study 1 provides a controlled numerical realization of the exact centroid--relation correspondence and decoder decomposition; Study 2 holds the finite representation mechanism fixed while exchanging graph-relational fidelity criteria; and Study 3 carries the normalized-cut realization into a shared inductive encoder evaluated on unseen graphs.
+Studies 4 and 5 then contrast reconstruction-defined requirements on a finite image representation with explicit teacher-defined relational requirements.\footnote{We write $\lambda_{\mathrm{org}}$ for marginal organization. In Studies 2--4 it corresponds to \texttt{lambda\_sep} (``separation weight'') in the implementation, with no change to settings or objectives; Study 5's pair-specific separation is distinct.}
+
+\subsection{Study 1: A controlled reconstruction--relational identity}
+\label{sec:synthetic-experiment}
+
+The first study provides a controlled numerical realization of \cref{prop:centroid-pairwise}, checking that the implemented centroid and inverse-mass-weighted pairwise forms agree as scalar objectives and in their encoder gradients.
+It also isolates what fails when the inverse-mass factor is omitted.
+
+The source consists of 768 points in $\R^2$ from an imbalanced six-component Gaussian mixture.
+A finite encoder has $K=8$ possible codewords, whose probabilities are evaluated exactly rather than sampled.
+The mixture imbalance encourages nonuniform empirical codeword occupancy, making the inverse-mass normalization consequential.
+Full settings and diagnostics are in \ref{app:synthetic-details}.
+
+With $\hat q_Z(z):=\frac{1}{N}\sum_iq_{iz}$, the implemented pairwise objective is the finite-sample inverse-mass identity already given in \cref{eq:finite-soft-pairwise}:
+\[
+D_{\mathrm{pair}}
+:=
+\frac{1}{2N^2}
+\sum_{z:\hat q_Z(z)>0}
+\frac{1}{\hat q_Z(z)}
+\sum_{i,j}
+q_{iz}q_{jz}\|x_i-x_j\|_2^2.
+\]
+Thus $D_{\mathrm{pair}}=D_{\mathrm{cent}}$.
+The deliberately uncorrected comparison is
+\[
+D_{\mathrm{raw}}
+:=
+\frac{1}{2N^2}
+\sum_{i,j}
+\|x_i-x_j\|_2^2
+\sum_zq_{iz}q_{jz}.
+\]
+Uniform empirical occupancy would give $D_{\mathrm{cent}}=KD_{\mathrm{raw}}$.
+The comparison therefore includes this global factor $K=8$; nonuniform occupancy instead requires the code-dependent inverse masses.
+
+Across the optimization and diagnostic checks, the corrected pairwise and centroid objectives agree to approximately single-precision tolerance, with maximum discrepancies below $2\times10^{-6}$ and encoder-gradient cosines of 1.000.
+By contrast, $KD_{\mathrm{raw}}$ has mean absolute error 4.79 in the random-state check.
+A global scale does not replace the inverse aggregate-mass correction.
+
+With the encoder assignments fixed, learned codeword reproduction vectors numerically realize \cref{eq:decoder-centroid-decomposition}.
+The excess term $\sum_{z:\hat q_Z(z)>0}\hat q_Z(z)\|\bar x_z-\widehat x_z\|_2^2$ decreases from 21.05 to $8.15\times10^{-5}$, while the largest decomposition residual is $1.91\times10^{-6}$.
+The result separates distortion due to the assignments from distortion due to an imperfect reproduction codebook.
+The identity applies to per-codeword centroid reproduction; joint neural decoding of many latent tokens has a different structure.
+\Cref{fig:synthetic-collision-centroid} summarizes the exact objective correspondence, the failure of the uncorrected collision control, and the decoder decomposition.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{synthetic_collision_centroid_equivalence.png}
+\caption{Synthetic numerical realization of the centroid--pairwise correspondence. Top left: learned hard partition and soft centroids. Top right: the two exact objectives follow the same trajectory from identical initialization. Bottom left: corrected pairwise distortion lies on the centroid identity line, whereas $KD_{\mathrm{raw}}$ does not. Bottom right: decoder distortion decomposes into centroid distortion plus reproduction mismatch.}
+\label{fig:synthetic-collision-centroid}
+\end{figure}
+
+The experiment verifies the inverse-mass centroid correspondence and separately exposes decoder reproduction mismatch, numerically illustrating why assignments and decoder reproductions are distinct parts of the description.
+
+\subsection{Study 2: Exchanging relational fidelity on a fixed representation}
+\label{sec:transductive-relational-distortion-experiment}
+
+The second study demonstrates the framework's separation between the finite representation and the relational fidelity used to shape it.
+Holding the graph-local $K=8$ representation and marginal-organization mechanism fixed, we exchange four source-derived graph fidelities and compare the resulting occupancy--fidelity behavior and partitions.
+Each graph has a free $n\times K$ logit matrix with $K=8$, rather than a learned graph encoder.
+There are no node features or labels, and no generalization problem.
+
+For $q_i=\operatorname{softmax}(\ell_i/\tau)$ with $\tau=1$, all four source distortion criteria have the form
+\begin{equation}
+D_\rho(q)=\sum_{e=\{i,j\}\in E}\rho_e(1-q_i^\top q_j),\qquad
+\rho_e\ge0,\quad\sum_{e\in E}\rho_e=1.
+\label{eq:transductive-drho}
+\end{equation}
+The choices are normalized direct-edge distortion $D_E$ from \cref{eq:normalized-edge-distortion}, all-mode effective-resistance distortion $D_F$ from \cref{eq:source-normalized-dirichlet-distortion}, source-collision probe distortion $D_C$ from \cref{eq:source-collision-edge-distortion}, and entropy-field distortion $D_{H_2}$ from \cref{eq:entropy-probe-distortion} when its denominator is positive.
+Here $D_{H_2}$ denotes distortion of the source transition-entropy field and is distinct from the code-occupancy statistic $H_2(\bar q_G)$ below.
+The graph-local marginal is degree weighted, and each run minimizes
+\begin{equation}
+\mathcal L=D_\rho(q)+\lambda_{\mathrm{org}}D_2(\bar q_G\|U_K)
+=D_\rho(q)-\lambda_{\mathrm{org}}H_2(\bar q_G)+\lambda_{\mathrm{org}}\log K.
+\label{eq:transductive-relational-objective}
+\end{equation}
+Here $\bar q_G$ is the degree-weighted graph-local aggregate defined in \cref{eq:graph-aggregate-code}, and the second equality uses the uniform-reference R\'enyi identity in \cref{eq:uniform-renyi}.
+Thus the sweep varies a noncollapse requirement while evaluating relational fidelity.
+
+The source collections are 20 cleaned connected MalNet-Tiny test graphs, 20 cleaned COLLAB graphs, and 20 cleaned PROTEINS graphs~\citep{freitas2021large,morris2020tudataset,yanardag2015deep,borgwardt2005protein}.
+To separate sensitivity to source edge weights from differences in topology, we also evaluate a weighted control on the same MalNet topologies, assigning deterministic positive lognormal edge weights.
+Labels are ignored.
+Because the graph-local objectives are optimized nonconvexly, every graph, fidelity, and organization weight uses the same multi-restart selection protocol, with selection by the target soft objective.
+Full restart, refinement, graph-filtering, and sweep details are given in \ref{app:transductive-relational-distortion-details}.
+
+\paragraph{Occupancy--fidelity trajectories}
+At zero organization weight, every defined criterion selects the one-codeword solution, with zero positive-relation distortion and $K_{\mathrm{eff}}=1$.
+Increasing organization moves the hard solutions toward broader codeword use with nonzero relational distortion.
+On unweighted MalNet, $\lambda_{\mathrm{org}}=0.20$ yields hard $K_{\mathrm{eff}}\approx7.8$ across criteria, with own hard distortions 0.238 for $D_E$, 0.153 for $D_F$, 0.127 for $D_C$, and 0.096 for $D_{H_2}$.
+These values quantify different source properties on their respective fidelity scales.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{transductive_relational_distortion_sweep.png}
+\caption{Transductive collision-occupancy--fidelity trajectories. The horizontal coordinate is hard $H_2(\bar q_G)$ and the vertical coordinate is each criterion's own hard distortion. Points average the selected graphs at 15 organization weights. The secondary axis transforms the plotted mean entropy by exponentiation; it does not in general equal the arithmetic mean of per-graph effective counts.}
+\label{fig:transductive-relational-distortion-sweep}
+\end{figure}
+
+In \cref{fig:transductive-relational-distortion-sweep}, complete collapse preserves all positive edges under the masking interpretation, while organization imposes distinctions that sever some of them, so the curves increase rather than follow the classical shape of an upper-rate distortion budget.
+The experiment realizes the lower-occupancy-bound direction of \cref{eq:relational-complexity-distortion-frontier} through a penalty.
+Its trajectories are empirical optimization results from a nonconvex solver rather than certified constrained frontiers.
+
+\paragraph{Agreement between source criteria}
+Some different fidelity constructions give similar edge priorities on particular sources.
+\Cref{tab:transductive-distortion-correlations} compares their normalized importance vectors and their rankings of 256 approximately node-balanced random hard partitions per graph.
+$D_F$ and $D_C$ are strongly aligned on unweighted MalNet and PROTEINS, with mean rank correlations 0.975 and 0.981.
+The weighted MalNet control reduces the correlation to 0.724, showing that source weights materially affect their agreement.
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{lrrrr}
+\toprule
+Source & \shortstack{Importance cosine\\$(D_F,D_C)$} & \shortstack{Spearman\\$(D_F,D_C)$} & \shortstack{Spearman\\$(D_F,D_{H_2})$} & \shortstack{Spearman\\$(D_C,D_{H_2})$} \\
+\midrule
+MalNet unweighted & 0.979 & 0.975 & 0.666 & 0.616 \\
+MalNet weighted & 0.744 & 0.724 & 0.500 & 0.550 \\
+COLLAB & 0.833 & 0.814 & 0.523 & 0.774 \\
+PROTEINS & 0.983 & 0.981 & 0.616 & 0.608 \\
+\bottomrule
+\end{tabular}
+\caption{Source-fidelity agreement. Importance cosine compares the normalized source-importance vectors for $D_F$ and $D_C$; the remaining columns report Spearman correlations of distortion values over random hard partitions, averaged over graphs. COLLAB correlations involving $D_{H_2}$ use the 18 sources where that normalized fidelity is defined.}
+\label{tab:transductive-distortion-correlations}
+\end{table}
+
+The entropy-field criterion is generally less aligned with the other probes.
+On PROTEINS at $\lambda_{\mathrm{org}}=0.20$, its solutions have hard $K_{\mathrm{eff}}\approx5.59$ and own distortion 0.091, while the other criteria have effective counts near 4.2 and own distortions 0.149--0.163.
+Because these differences mix occupancy and fidelity, the occupancy-matched analysis below is needed to compare preserved structure at similar complexity.
+COLLAB also has a slower transition, reaching mean hard $K_{\mathrm{eff}}\ge4$ only at weight 0.50, with less sharp soft assignments at high weights.
+
+\paragraph{Occupancy-matched partitions and transfer}
+To separate those effects, solutions are selected independently from the existing sweeps at hard $H_2$ targets from 0.25 to 2.0 nats.
+A pair is compared only when each solution is within 0.10 nats of the target and their entropies differ by at most 0.10 nats.
+Adjusted Rand index (ARI) evaluates label-invariant partition agreement.
+Cross-distortion excess uses one evaluation fidelity at a time: $\Delta_{A\to B}=D_B(c_A)-D_B(c_B)$ and $\Delta_{B\to A}=D_A(c_B)-D_A(c_A)$.
+These are approximate occupancy matches of heuristic solutions; the reported excess is descriptive and can be slightly negative.
+\Cref{fig:transductive-rate-matched-partition-agreement} summarizes the resulting hard-partition agreement across occupancy targets and criterion pairs.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{transductive_rate_matched_partition_agreement.png}
+\caption{Occupancy-matched hard-partition agreement. Mean ARI is shown with interquartile bands for criterion pairs meeting the 0.10-nat matching rule; a point is displayed only when at least five graphs match. Missing low-entropy MalNet points reflect limited sweep coverage.}
+\label{fig:transductive-rate-matched-partition-agreement}
+\end{figure}
+
+On PROTEINS, $D_F$ and $D_C$ produce mean ARI 0.968 at $H_2=1.0$ and 0.991 at $H_2=1.25$, with near-zero transfer excess.
+At $H_2=2.0$, their ARI is 0.764 while the two excesses remain only 0.0046 and 0.0084.
+Thus partitions can differ without substantially changing either criterion's preserved content.
+By contrast, at $H_2=2.0$ on unweighted MalNet, $D_F$ versus $D_{H_2}$ has ARI 0.166 and $D_C$ versus $D_{H_2}$ has ARI 0.196, compared with 0.781 for $D_F$ versus $D_C$.
+The full matched table, six-pair diagnostics, and transfer matrix are retained in \ref{app:transductive-relational-distortion-details}.
+
+Thus, with representation and marginal organization held fixed, changing source fidelity changes source-edge priorities and can change the resulting partition; agreement in priorities, assignments, and cross-fidelity transfer need not coincide.
+
+\subsection{Study 3: An inductive realization of normalized-cut fidelity}
+\label{sec:malnet-ncut-experiment}
+
+The third study moves from graph-specific optimization to a shared encoder evaluated on unseen graphs.
+It demonstrates an inductive realization of the normalized-cut correspondence: a single finite-codeword encoder is trained with graph-local soft normalized cut while marginal organization is varied, and the resulting hard partitions are evaluated by normalized-cut fidelity, code occupancy, and the post-hoc fidelity $D_F$.
+The numerical comparison below uses a per-graph spectral normalized-cut reference.
+For related differentiable graph-partitioning constructions, we refer the reader to GAP, the method of Gatti et al., and MinCutPool~\citep{nazi2019gap,gatti2022deep,bianchi2020spectral}.
+The probabilistic-cut work of \citet{ghriss2026beyond} addresses expected discrete cut objectives with random denominators, whereas this study uses the deterministic soft-mass surrogate.
+
+\paragraph{Source objects and preprocessing}
+MalNet-Tiny function-call graphs are split using the official train, validation, and test assignments~\citep{freitas2021large}.
+The inputs, losses, and selection criteria exclude malware labels.
+Each directed graph is converted to a simple undirected edge union, self-loops and duplicate edges are removed, and the largest connected component is reindexed.
+Requiring at least 512 nodes after cleaning leaves 1995 training, 275 validation, and 584 test graphs.
+The exclusions are documented in \ref{app:malnet-ncut-details}.
+
+Node features are structural.
+On the cleaned graph they include a constant, degree, $\log(1+d_i)$, graph-normalized degree, and random-walk return estimates for $\operatorname{diag}(P^t)$, where $P$ is the transition matrix of the cleaned undirected graph.
+The estimates are cached deterministically for each graph.
+Exact return probabilities are permutation-equivariant node features; the finite cached probe realization retains exact samplewise equivariance when its probes are transported with a relabeling.
+
+Directed in-degree, out-degree, total degree, their logarithmic and normalized forms, and PageRank relative to the uniform baseline are computed on the original directed graph before symmetrization and carried to the retained vertices.
+Explicit node identifiers and Laplacian eigenvectors are also excluded from the model inputs.
+The encoder can use directed structural context even though fidelity is evaluated on the cleaned undirected graph.
+This available-input convention is part of the inductive realization.
+
+\paragraph{Encoder and objective}
+A GraphGPS-style encoder~\citep{rampasek2022recipe} combines local GIN message passing~\citep{xu2019powerful} with global factorized efficient attention~\citep{shen2021efficient}, followed by a graph-context-conditioned $K=8$ assignment head.
+Full architecture and training settings are given in \ref{app:malnet-ncut-details}.
+Soft assignments are $q_i=\operatorname{softmax}(\ell_i)$; hard assignments take the maximizing codeword.
+
+For each graph, $\bar q_G$ is the degree-weighted graph-local aggregate defined in \cref{eq:graph-aggregate-code}.
+The minibatch loss is
+\begin{equation}
+\mathcal L_B=\frac1{|B|}\sum_{G\in B}
+\left[\operatorname{Ncut}_{K,\mathrm{soft}}(G)
++\lambda_{\mathrm{org}}D_2(\bar q_G\|U_K)\right].
+\label{eq:malnet-ncut-loss}
+\end{equation}
+Here $\operatorname{Ncut}_{K,\mathrm{soft}}$ is the fixed-$K$ soft normalized-cut criterion of \cref{eq:soft-ncut-relational-distortion}, while $D_2(\bar q_G\|U_K)$ uses the uniform-reference organization term of \cref{eq:uniform-renyi}.
+The graph-local aggregate supplies the endogenous inverse-mass construction of \cref{eq:soft-nassoc-affinity}, while the external uniform reference specifies marginal organization.
+The loss is averaged over graphs only after these graph-local quantities are formed.
+When $\lambda_{\mathrm{org}}=0$, the marginal organization term is absent, so training minimizes only the graph-local soft normalized-cut criterion.
+Training uses five seeds.
+
+\paragraph{Evaluation}
+Validation mean hard fixed-$K$ normalized cut, following \cref{eq:soft-ncut-relational-distortion,eq:hard-ncut}, selects checkpoints.
+An empty hard class contributes zero association and hence a unit penalty, so using fewer than eight classes receives the corresponding fixed-$K$ cost.
+Hard evaluation uses the induced partition relation against the cleaned source graph.
+Post-hoc $D_F$ from \cref{eq:hard-partition-dirichlet-distortion} evaluates a second relational property after training.
+
+A spectral reference computes a normalized-Laplacian embedding and deterministic $K$-means discretization separately for each cleaned graph, following the standard spectral-clustering construction~\citep{ng2001spectral}, and provides a transductive objective comparison.
+The learned model instead applies one parameter set after structural preprocessing of each held-out graph.
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{lrrrr}
+\toprule
+$\lambda_{\mathrm{org}}$ & Val Ncut & Test Ncut & Test $D_F$ & Test median Ncut \\
+\midrule
+0 & $1.129\pm0.063$ & $1.160\pm0.043$ & $0.0606\pm0.0115$ & $1.083\pm0.043$ \\
+0.03 & $1.137\pm0.060$ & $1.171\pm0.062$ & $0.0657\pm0.0179$ & $1.093\pm0.061$ \\
+0.10 & $1.158\pm0.029$ & $1.186\pm0.033$ & $0.0926\pm0.0055$ & $1.116\pm0.031$ \\
+0.20 & $1.136\pm0.039$ & $1.170\pm0.030$ & $0.1117\pm0.0017$ & $1.114\pm0.035$ \\
+0.50 & $1.285\pm0.026$ & $1.319\pm0.022$ & $0.1475\pm0.0020$ & $1.270\pm0.017$ \\
+\midrule
+Spectral reference & 1.143 & 1.159 & 0.0805 & 1.104 \\
+\bottomrule
+\end{tabular}
+\caption{MalNet-Tiny fidelity results. Learned rows show mean and sample standard deviation across five seeds. Lower is better for all displayed fidelities. The deterministic spectral reference is evaluated once on the same cleaned splits. $D_F$ is post-hoc.}
+\label{tab:malnet-ncut-results}
+\end{table}
+
+The organization diagnostics report soft $K_{\mathrm{eff}}$, the collision-effective code count defined in \cref{eq:effective-code-count}, and soft $D_2$, meaning $D_2(\bar q_G\|U_K)$ with the uniform-reference identity in \cref{eq:uniform-renyi}.
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{lrrr}
+\toprule
+$\lambda_{\mathrm{org}}$ & Largest hard volume fraction & Soft $K_{\mathrm{eff}}$ & Soft $D_2$ \\
+\midrule
+0 & $0.840\pm0.042$ & $1.42\pm0.14$ & $1.745\pm0.093$ \\
+0.03 & $0.807\pm0.072$ & $1.54\pm0.26$ & $1.679\pm0.149$ \\
+0.10 & $0.678\pm0.023$ & $2.00\pm0.08$ & $1.416\pm0.043$ \\
+0.20 & $0.544\pm0.006$ & $2.45\pm0.03$ & $1.195\pm0.012$ \\
+0.50 & $0.375\pm0.012$ & $3.55\pm0.10$ & $0.820\pm0.030$ \\
+\midrule
+Spectral reference & 0.575 & -- & -- \\
+\bottomrule
+\end{tabular}
+\caption{Organization of the same MalNet-Tiny solutions. Quantities are computed per graph before averaging. Mean effective count and mean divergence need not obey a nonlinear identity after averaging. The reference has a hard effective count of 2.78; it has no soft-assignment counterpart in these columns.}
+\label{tab:malnet-organization-results}
+\end{table}
+
+\paragraph{Fidelity and organization}
+Pure normalized cut attains test hard Ncut $1.160\pm0.043$, close to the spectral mean 1.159.
+The learned partition is more concentrated: its largest hard class contains mean volume fraction $0.840\pm0.042$, and soft $K_{\mathrm{eff}}$ is only $1.42\pm0.14$ despite nearly all eight hard classes being active.
+The two solutions therefore have similar objective values but different representation organization.
+
+Increasing organization weight to 0.20 reduces the largest hard volume fraction to $0.544\pm0.006$ and raises soft $K_{\mathrm{eff}}$ to $2.45\pm0.03$, while test Ncut remains $1.170\pm0.030$.
+At weight 0.50, the volume fraction falls to $0.375\pm0.012$ and effective count rises to $3.55\pm0.10$, but Ncut increases to $1.319\pm0.022$.
+The occupancy trend is stable across the sweep, while small Ncut differences among moderate weights should not be overinterpreted relative to seed variation.
+\Cref{fig:malnet-ncut-sweep} summarizes this occupancy--fidelity behavior across the organization sweep.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{malnet_ncut_separation_sweep.png}
+\caption{MalNet-Tiny organization sweep. Error bars show sample standard deviations over five seeds. Increasing the marginal-organization weight reduces dominant-class volume and broadens soft effective occupancy; post-hoc $D_F$ shows the accompanying change in another relational fidelity. Dashed lines show transductive spectral summaries.}
+\label{fig:malnet-ncut-sweep}
+\end{figure}
+
+The post-hoc probe also distinguishes partitions that look similar under normalized cut.
+Weights 0.03 and 0.20 give almost identical test Ncut, $1.171\pm0.062$ and $1.170\pm0.030$, but $D_F$ values $0.0657\pm0.0179$ and $0.1117\pm0.0017$.
+After averaging seeds and pairing by test graph, the latter has higher $D_F$ on 581 of 584 graphs, with mean difference 0.0460; the corresponding mean Ncut difference is $-0.0006$.
+Normalized cut and effective-resistance distortion therefore define different fidelities.
+
+Likewise, the pure learned solution has lower mean $D_F$ than the spectral reference, 0.0606 versus 0.0805, but is substantially more concentrated.
+The comparison matches nominal assignment capacity but not realized occupancy; the learned and spectral procedures also have different deployment and model-cost conventions.
+\Cref{fig:malnet-ncut-partition-example} illustrates cases near the 25th, 50th, 75th, and 95th percentiles of the learned-minus-spectral normalized-cut gap among held-out graphs with at most 900 nodes.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{malnet_ncut_partition_example.png}
+\caption{Representative MalNet-Tiny partitions at organization weight 0.20, selected near the 25th, 50th, 75th, and 95th percentiles of the learned-minus-spectral hard Ncut gap among held-out graphs with at most 900 nodes. Each row shares a force-directed layout. Partition labels and color assignments are independently permuted for display, so colors do not correspond across panels.}
+\label{fig:malnet-ncut-partition-example}
+\end{figure}
+
+Together, the study shows that a shared encoder can learn the normalized-cut realization on unseen graphs, while occupancy and post-hoc $D_F$ reveal distinctions not captured by normalized cut alone.
+
+\input{sections/image_experiments}
