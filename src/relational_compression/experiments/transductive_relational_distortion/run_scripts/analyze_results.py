@@ -40,7 +40,7 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
     """Write csv."""
-    if not rows:
+    if len(rows) == 0:
         return
     path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = sorted({key for row in rows for key in row})
@@ -78,7 +78,7 @@ def _mean(values: list[float]) -> float:
 def _std(values: list[float]) -> float:
     """Compute std."""
     finite = _finite(values)
-    if not finite.size:
+    if finite.size == 0:
         return float("nan")
     return float(finite.std(ddof=1 if finite.size > 1 else 0))
 
@@ -196,7 +196,7 @@ def _cross_objective_summary(rows: list[dict[str, str]]) -> list[dict[str, Any]]
                 "target_criterion": target,
                 "num_comparisons": len(group),
                 "candidate_beats_target": misses,
-                "candidate_beats_target_fraction": misses / len(group) if group else float("nan"),
+                "candidate_beats_target_fraction": misses / len(group) if len(group) > 0 else float("nan"),
                 "candidate_advantage_mean": _mean(advantages),
             }
         )
@@ -255,7 +255,7 @@ def _validate_ranges(
         foster_expected = _float(row.get("source_foster_expected"))
         if math.isfinite(foster_sum) and math.isfinite(foster_expected):
             foster_errors.append(abs(foster_sum - foster_expected))
-    if range_violations:
+    if len(range_violations) > 0:
         raise ValueError(f"Found {len(range_violations)} numerical range violations; first={range_violations[0]}")
     return {
         "range_violation_count": 0,
@@ -291,7 +291,7 @@ def analyze_experiment(experiment_dir: Path, *, output_dir: Path) -> dict[str, A
     validation["collision_entropy_exclusion_count"] = sum(
         1 for row in exclusions if str(row.get("criterion")) == COLLISION_ENTROPY
     )
-    if validation["post_selection_cross_objective_misses"]:
+    if int(validation["post_selection_cross_objective_misses"]) > 0:
         raise ValueError("Post-selection cross-objective misses are nonzero")
 
     _write_csv(path=output_dir / "final_analysis_aggregate_compact.csv", rows=compact)

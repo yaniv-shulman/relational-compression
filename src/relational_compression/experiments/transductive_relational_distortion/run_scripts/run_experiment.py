@@ -275,7 +275,7 @@ def _random_partition_correlation_rows(
 def _summarize_metric_rows(rows: list[dict[str, Any]], prefix: str = "") -> dict[str, float]:
     """Summarize metric rows."""
     result: dict[str, float] = {}
-    if not rows:
+    if len(rows) == 0:
         return result
     skip = {
         "collection",
@@ -295,7 +295,7 @@ def _summarize_metric_rows(rows: list[dict[str, Any]], prefix: str = "") -> dict
             value = row.get(key)
             if isinstance(value, int | float) and math.isfinite(float(value)):
                 values.append(float(value))
-        if not values:
+        if len(values) == 0:
             continue
         array = np.asarray(values, dtype=np.float64)
         result[f"{prefix}{key}_mean"] = float(array.mean())
@@ -397,7 +397,7 @@ def _write_plots(experiment_dir: Path, aggregate: list[dict[str, Any]]) -> None:
             fig, axis = plt.subplots(nrows=1, ncols=1, figsize=(4.8, 3.4), constrained_layout=True)
             for criterion in SOURCE_CRITERIA:
                 criterion_rows = [row for row in rows if str(row["criterion"]) == criterion]
-                if not criterion_rows:
+                if len(criterion_rows) == 0:
                     continue
                 criterion_rows.sort(key=lambda row: float(row["lambda_org"]))
                 stem = CRITERION_FIELD_STEM[criterion]
@@ -423,7 +423,7 @@ def _write_plots(experiment_dir: Path, aggregate: list[dict[str, Any]]) -> None:
             fig, axis = plt.subplots(nrows=1, ncols=1, figsize=(4.8, 3.4), constrained_layout=True)
             for train_criterion in SOURCE_CRITERIA:
                 criterion_rows = [row for row in rows if str(row["criterion"]) == train_criterion]
-                if not criterion_rows:
+                if len(criterion_rows) == 0:
                     continue
                 criterion_rows.sort(key=lambda row: float(row["lambda_org"]))
                 axis.plot(
@@ -738,7 +738,7 @@ def run_experiment(config: Any) -> dict[str, Any]:
                         "source_collision_entropy_denominator": float(geometry.collision_entropy_denominator),
                     }
                 )
-        if not criteria:
+        if len(criteria) == 0:
             continue
 
         for lambda_org in tuple(config.lambda_org_values):
@@ -813,19 +813,19 @@ def run_experiment(config: Any) -> dict[str, Any]:
 
     write_csv(path=experiment_dir / "per_graph_results.csv", rows=rows)
     write_csv(path=experiment_dir / "aggregate_results.csv", rows=aggregate)
-    if source_rho_rows:
+    if len(source_rho_rows) > 0:
         write_csv(path=experiment_dir / "source_rho_correlations.csv", rows=source_rho_rows)
-    if random_partition_rows:
+    if len(random_partition_rows) > 0:
         write_csv(path=experiment_dir / "random_partition_distortion_correlations.csv", rows=random_partition_rows)
-    if cross_objective_rows:
+    if len(cross_objective_rows) > 0:
         write_csv(path=experiment_dir / "cross_objective_diagnostics.csv", rows=cross_objective_rows)
-    if cross_objective_misses:
+    if cross_objective_misses > 0:
         write_json(path=experiment_dir / "diagnostic_summaries.json", value=diagnostic_summaries)
         raise RuntimeError(
             "Post-selection cross-objective invariant failed: "
             f"{cross_objective_misses} selected candidate misses exceed {OBJECTIVE_COMPARISON_TOLERANCE}"
         )
-    if exclusion_rows:
+    if len(exclusion_rows) > 0:
         write_csv(path=experiment_dir / "criterion_exclusions.csv", rows=exclusion_rows)
     write_json(path=experiment_dir / "aggregate_results.json", value=aggregate)
     write_json(path=experiment_dir / "diagnostic_summaries.json", value=diagnostic_summaries)
@@ -906,7 +906,7 @@ def get_experiment_config() -> Any:
         config.malnet_split = args.malnet_split
     if args.splits is not None:
         parsed_splits = _parse_str_list(args.splits)
-        if parsed_splits:
+        if len(parsed_splits) > 0:
             config.malnet_split = parsed_splits[0]
     if args.max_graphs_per_split is not None:
         config.graphs_per_collection = args.max_graphs_per_split

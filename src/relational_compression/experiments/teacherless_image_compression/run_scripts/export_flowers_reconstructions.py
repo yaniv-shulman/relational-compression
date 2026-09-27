@@ -117,7 +117,7 @@ def _select_indices(dataset_size: int, *, num_examples: int, indices: list[int] 
         raise ValueError("dataset must contain at least one example")
 
     if indices is not None:
-        if not indices:
+        if len(indices) == 0:
             raise ValueError("--indices must contain at least one index when provided")
         selected = list(indices)
     else:
@@ -128,7 +128,7 @@ def _select_indices(dataset_size: int, *, num_examples: int, indices: list[int] 
         selected = torch.randperm(dataset_size, generator=generator)[:count].tolist()
 
     invalid = [index for index in selected if index < 0 or index >= dataset_size]
-    if invalid:
+    if len(invalid) > 0:
         raise IndexError(f"Sample indices out of range for dataset of size {dataset_size}: {invalid}")
 
     return selected
@@ -184,7 +184,7 @@ def _render_labeled_grid(
         raise ValueError("--display-size must be positive")
     if examples_per_row < 1:
         raise ValueError("--examples-per-row must be positive")
-    if not columns:
+    if len(columns) == 0:
         raise ValueError("at least one image column is required")
 
     example_count = int(columns[0][1].shape[0])

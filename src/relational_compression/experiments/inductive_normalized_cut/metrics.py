@@ -278,7 +278,7 @@ def summarize_tensor(values: Tensor, prefix: str) -> dict[str, float]:
 
 def summarize_soft_result(result: SoftNormalizedCutResult, prefix: str = "") -> dict[str, float]:
     """Convert soft normalized-cut outputs into named scalar summaries."""
-    stem = f"{prefix}_" if prefix else ""
+    stem = f"{prefix}_" if prefix != "" else ""
     values: dict[str, float] = {}
     values.update(summarize_tensor(values=result.ncut_per_graph, prefix=f"{stem}soft_ncut"))
     values.update(summarize_tensor(values=result.nassoc_per_graph, prefix=f"{stem}soft_nassoc"))
@@ -306,7 +306,7 @@ def summarize_soft_result(result: SoftNormalizedCutResult, prefix: str = "") -> 
 
 def summarize_hard_result(result: HardNormalizedCutResult, prefix: str = "") -> dict[str, float]:
     """Convert hard partition outputs into named scalar summaries."""
-    stem = f"{prefix}_" if prefix else ""
+    stem = f"{prefix}_" if prefix != "" else ""
     values: dict[str, float] = {}
     values.update(summarize_tensor(values=result.ncut_per_graph, prefix=f"{stem}hard_ncut"))
     values.update(summarize_tensor(values=result.nassoc_per_graph, prefix=f"{stem}hard_nassoc"))

@@ -242,7 +242,7 @@ def optimize_partition(
         raise ValueError("optimization_steps must be positive")
     if init_scale <= 0.0:
         raise ValueError("init_scale must be positive")
-    if not restart_seeds and not initial_logit_specs:
+    if len(restart_seeds) == 0 and len(initial_logit_specs) == 0:
         raise ValueError("At least one restart seed or initial logit specification is required")
 
     device = torch.device(device)
@@ -254,7 +254,7 @@ def optimize_partition(
     summaries: list[RestartSummary] = []
 
     restart_specs: list[tuple[str, int, float | None]] = [("random", int(seed), None) for seed in restart_seeds]
-    if include_collapse_restart and restart_seeds:
+    if include_collapse_restart and len(restart_seeds) > 0:
         restart_specs.insert(0, ("collapse", int(restart_seeds[0]), float(collapse_init_bias)))
 
     for restart_index, (init_kind, seed, collapse_bias) in enumerate(restart_specs):

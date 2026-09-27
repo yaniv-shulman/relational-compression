@@ -270,7 +270,7 @@ def _correlation_summary(rows: list[dict[str, Any]], x_metric: str, y_metric: st
     paired = [
         (float(row[x_metric]), float(row[y_metric])) for row in rows if row[x_metric] != "" and row[y_metric] != ""
     ]
-    if not paired:
+    if len(paired) == 0:
         return {"count": 0, "pearson": float("nan"), "spearman": float("nan")}
     x_values = [x for x, _ in paired]
     y_values = [y for _, y in paired]
@@ -283,7 +283,7 @@ def _correlation_summary(rows: list[dict[str, Any]], x_metric: str, y_metric: st
 
 def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
     """Write csv."""
-    if not rows:
+    if len(rows) == 0:
         raise ValueError(f"No rows to write to {path}")
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="") as handle:
@@ -404,7 +404,7 @@ def _aggregate_rows(rows: list[dict[str, Any]], runs: list[RunSpec]) -> dict[str
     per_run: list[dict[str, Any]] = []
     for row_split in sorted({str(row["split"]) for row in rows}):
         spectral_rows = [row for row in rows if row["split"] == row_split and row["partition_source"] == "spectral"]
-        if spectral_rows:
+        if len(spectral_rows) > 0:
             per_run.append(
                 {
                     "partition_source": "spectral",
@@ -427,7 +427,7 @@ def _aggregate_rows(rows: list[dict[str, Any]], runs: list[RunSpec]) -> dict[str
                 and row["partition_source"] == "learned"
                 and row["run_name"] == run.run_name
             ]
-            if not run_rows:
+            if len(run_rows) == 0:
                 continue
             per_run.append(
                 {
@@ -459,7 +459,7 @@ def _aggregate_rows(rows: list[dict[str, Any]], runs: list[RunSpec]) -> dict[str
                 and item["split"] == row_split
                 and float(item["separation_weight"]) == float(separation_weight)
             ]
-            if not setting_runs:
+            if len(setting_runs) == 0:
                 continue
             by_setting.append(
                 {
@@ -556,7 +556,7 @@ def _delta_summary(values: list[float]) -> dict[str, float | int]:
     """Compute delta summary."""
     summary = _summarize(values)
     summary["positive_fraction"] = (
-        float(np.mean(np.asarray(values, dtype=np.float64) > 0.0)) if values else float("nan")
+        float(np.mean(np.asarray(values, dtype=np.float64) > 0.0)) if len(values) > 0 else float("nan")
     )
     summary["positive_count"] = int(np.count_nonzero(np.asarray(values, dtype=np.float64) > 0.0))
     summary["count"] = len(values)
@@ -606,7 +606,7 @@ def _correlation_diagnostics(rows: list[dict[str, Any]]) -> dict[str, Any]:
     per_run: list[dict[str, Any]] = []
     for split in sorted({str(row["split"]) for row in rows}):
         spectral_rows = [row for row in rows if row["split"] == split and row["partition_source"] == "spectral"]
-        if spectral_rows:
+        if len(spectral_rows) > 0:
             per_run.append(
                 {
                     "partition_source": "spectral",
@@ -724,10 +724,12 @@ def _sanity_checks(rows: list[dict[str, Any]], resistance_cache_dir: Path) -> di
         "d_f_negative_count_tolerance_1e-8": int(np.count_nonzero(d_f_values < -1e-8)),
         "d_f_above_one_count_tolerance_1e-8": int(np.count_nonzero(d_f_values > 1.0 + 1e-8)),
         "effective_resistance_graph_count": len(foster_errors),
-        "foster_absolute_error_max": float(np.max(foster_errors)) if foster_errors else float("nan"),
-        "foster_relative_error_max": float(np.max(foster_relative_errors)) if foster_relative_errors else float("nan"),
+        "foster_absolute_error_max": float(np.max(foster_errors)) if len(foster_errors) > 0 else float("nan"),
+        "foster_relative_error_max": float(np.max(foster_relative_errors))
+        if len(foster_relative_errors) > 0
+        else float("nan"),
         "foster_relative_error_mean": float(np.mean(foster_relative_errors))
-        if foster_relative_errors
+        if len(foster_relative_errors) > 0
         else float("nan"),
     }
 

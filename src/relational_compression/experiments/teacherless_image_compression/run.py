@@ -93,7 +93,7 @@ def _validate(
             probability_values.append(hard_output.quantizer.probabilities.cpu())
             relaxed_values.append(relaxed_output.quantizer.relaxed.cpu())
 
-    if not num_examples:
+    if num_examples == 0:
         raise RuntimeError("Validation loader produced no batches")
 
     latent = latent_metrics(
@@ -112,7 +112,7 @@ def _validate(
         "relaxed_mse": relaxed_mse,
         "relaxed_psnr": _psnr(relaxed_mse),
         "hard_minus_relaxed_mse": hard_mse - relaxed_mse,
-        "ms_ssim": ms_ssim_sum / num_ssim_examples if num_ssim_examples else float("nan"),
+        "ms_ssim": ms_ssim_sum / num_ssim_examples if num_ssim_examples > 0 else float("nan"),
     }
 
     result.update(asdict(latent))

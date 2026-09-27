@@ -53,7 +53,7 @@ def restore_rng_state(state: Mapping[str, Any], *, restore_cuda: bool) -> None:
     """
     required_keys = ("python", "numpy", "torch")
     missing_keys = [key for key in required_keys if key not in state]
-    if missing_keys:
+    if len(missing_keys) > 0:
         missing_entries = ", ".join(missing_keys)
         raise ValueError(f"RNG state is missing required entries: {missing_entries}")
 

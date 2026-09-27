@@ -120,7 +120,7 @@ def weighted_hard_collision_rate(hard_tokens: Tensor, pairs: Tensor, weights: Te
 
 def _weighted_summary(prefix: str, value_parts: list[Tensor], weight_parts: list[Tensor]) -> dict[str, float]:
     """Compute weighted summary."""
-    if not value_parts:
+    if len(value_parts) == 0:
         return {
             f"{prefix}_mean": float("nan"),
             f"{prefix}_std": float("nan"),
@@ -251,7 +251,7 @@ def evaluate_representation(
                 weights=graph.negative_weights,
             )
 
-    if not all_hard:
+    if len(all_hard) == 0:
         raise RuntimeError("evaluation loader produced no batches")
 
     hard_metrics = asdict(hard_code_metrics(torch.cat(all_hard)))
@@ -264,7 +264,7 @@ def evaluate_representation(
     positive_loss = positive_loss_sum / positive_loss_weight_sum if positive_loss_weight_sum > 0.0 else 0.0
     negative_loss = negative_loss_sum / negative_loss_weight_sum if negative_loss_weight_sum > 0.0 else 0.0
     active_sides = int(positive_loss_weight_sum > 0.0) + int(negative_loss_weight_sum > 0.0)
-    teacher_loss = (positive_loss + negative_loss) / active_sides if active_sides else 0.0
+    teacher_loss = (positive_loss + negative_loss) / active_sides if active_sides > 0 else 0.0
 
     result = {
         **hard_metrics,

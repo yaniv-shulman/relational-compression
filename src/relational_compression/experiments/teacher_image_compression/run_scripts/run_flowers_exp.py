@@ -697,7 +697,7 @@ def run_single_flowers102_experiment(
         writer=writer,
         on_epoch_end=decoder_epoch_end,
     )
-    if decoder_result:
+    if len(decoder_result) > 0:
         result["decoder"] = decoder_result
 
     if writer is not None:

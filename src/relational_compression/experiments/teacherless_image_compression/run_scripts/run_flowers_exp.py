@@ -902,7 +902,7 @@ def main() -> None:
 
     invalid_modes = set(cfg.modes) - {"deterministic", "stochastic"}
 
-    if invalid_modes:
+    if len(invalid_modes) > 0:
         raise ValueError(f"Unsupported modes: {sorted(invalid_modes)}")
 
     device = torch.device(cfg.device)

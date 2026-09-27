@@ -332,7 +332,7 @@ def _train_decoder(
 
 def _write_csv(path: Path, rows: list[dict[str, float]]) -> None:
     """Write csv."""
-    if not rows:
+    if len(rows) == 0:
         raise ValueError("cannot write an empty CSV")
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="") as handle:

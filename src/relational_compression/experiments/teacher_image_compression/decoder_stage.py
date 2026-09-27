@@ -155,7 +155,7 @@ def validate_decoder(
     return {
         "mse": mse,
         "psnr": psnr(mse),
-        "ms_ssim": ms_ssim_sum / ms_ssim_count if ms_ssim_count else float("nan"),
+        "ms_ssim": ms_ssim_sum / ms_ssim_count if ms_ssim_count > 0 else float("nan"),
     }
 
 

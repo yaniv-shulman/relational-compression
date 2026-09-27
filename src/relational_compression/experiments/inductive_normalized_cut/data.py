@@ -430,7 +430,7 @@ def preprocess_graph(
 
 def _stats(values: list[int | float]) -> dict[str, float | int | None]:
     """Summarize a numeric sequence for graph-preprocessing metadata."""
-    if not values:
+    if len(values) == 0:
         return {
             "count": 0,
             "min": None,

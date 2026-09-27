@@ -281,7 +281,7 @@ def _prefix_metrics(prefix: str, metrics: dict[str, float]) -> dict[str, float]:
 
 def _write_history_csv(path: Path, history: list[dict[str, float]]) -> None:
     """Write history csv."""
-    if not history:
+    if len(history) == 0:
         return
     path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = sorted({key for row in history for key in row})
@@ -348,7 +348,7 @@ def evaluate_model(
             max_volume.append(hard.max_partition_volume_fraction_per_graph.detach().cpu())
             within_edge.append(hard.within_edge_fraction_per_graph.detach().cpu())
 
-    if not hard_ncuts:
+    if len(hard_ncuts) == 0:
         raise RuntimeError("evaluation loader produced no batches")
 
     metrics: dict[str, float] = {}
@@ -401,7 +401,7 @@ def _evaluate_spectral_split(
         )
 
     summary: dict[str, Any] = {"split": split, "graph_count": len(rows)}
-    if rows:
+    if len(rows) > 0:
         for key in rows[0]:
             summary.update(summarize_tensor(values=torch.tensor([row[key] for row in rows]), prefix=key))
         summary["hard_ncut_values"] = [row["hard_ncut"] for row in rows]
@@ -688,7 +688,9 @@ def run_single_malnet_tiny_experiment(
             config=experiment_config,
             max_batches=experiment_config.max_val_batches,
         )
-        train_loss_mean = float(torch.stack(train_losses).mean().detach().cpu()) if train_losses else float("nan")
+        train_loss_mean = (
+            float(torch.stack(train_losses).mean().detach().cpu()) if len(train_losses) > 0 else float("nan")
+        )
         row = {
             "epoch": float(epoch),
             "train_loss": train_loss_mean,

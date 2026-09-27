@@ -243,7 +243,7 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
     """Write csv."""
-    if not rows:
+    if len(rows) == 0:
         raise ValueError(f"No rows to write to {path}")
     path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = sorted({key for row in rows for key in row})
