@@ -9,7 +9,17 @@ import torch
 
 
 def capture_rng_state(*, include_cuda: bool) -> dict[str, Any]:
-    """Capture Python, NumPy, Torch CPU, and optionally CUDA RNG state."""
+    """Capture Python, NumPy, Torch CPU, and optionally CUDA RNG state.
+
+    Args:
+        include_cuda: Whether to include CUDA RNG state.
+
+    Returns:
+        A safely serializable mapping of random-number-generator states.
+
+    Raises:
+        ValueError: If CUDA state is requested but CUDA is unavailable.
+    """
     bit_generator, keys, position, has_gauss, cached_gaussian = cast(
         tuple[str, Any, int, int, float], np.random.get_state()
     )
@@ -32,7 +42,15 @@ def capture_rng_state(*, include_cuda: bool) -> dict[str, Any]:
 
 
 def restore_rng_state(state: Mapping[str, Any], *, restore_cuda: bool) -> None:
-    """Restore a state captured by :func:`capture_rng_state`."""
+    """Restore a state captured by :func:`capture_rng_state`.
+
+    Args:
+        state: The checkpointed random-number-generator state.
+        restore_cuda: Whether to restore CUDA RNG state.
+
+    Raises:
+        ValueError: If the state is incomplete or invalid, or required CUDA state is unavailable.
+    """
     required_keys = ("python", "numpy", "torch")
     missing_keys = [key for key in required_keys if key not in state]
     if missing_keys:
