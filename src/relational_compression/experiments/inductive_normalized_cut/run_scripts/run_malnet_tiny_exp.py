@@ -163,7 +163,7 @@ def _config_dict(config: Any) -> dict[str, Any]:
             json.dumps(value, default=_json_default)
         except TypeError:
             continue
-        result[name] = value
+        result[name] = json.loads(json.dumps(value, default=_json_default))
     return result
 
 
@@ -581,7 +581,7 @@ def run_single_malnet_tiny_experiment(
     history: list[dict[str, float]] = []
 
     if latest_path.exists():
-        checkpoint = torch.load(latest_path, map_location=device, weights_only=False)
+        checkpoint = torch.load(latest_path, map_location=device, weights_only=True)
         if checkpoint.get("config") != _checkpoint_config_dict(experiment_config):
             raise ValueError(f"Checkpoint config does not match this run: {latest_path}")
         model.load_state_dict(checkpoint["model_state_dict"])

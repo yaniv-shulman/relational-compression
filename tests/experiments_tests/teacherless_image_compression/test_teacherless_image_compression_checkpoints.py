@@ -2,6 +2,9 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+import torch
+
+from relational_compression.randomness import capture_rng_state
 
 
 def _resume_config() -> SimpleNamespace:
@@ -44,6 +47,21 @@ def _checkpoint_config(experiment_config: SimpleNamespace) -> dict[str, object]:
 
     model_config = _as_experiment_config(experiment_config)
     return _checkpoint_config_dict(experiment_config, model_config=model_config)
+
+
+def test_checkpoint_config_supports_weights_only_loading(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Ensure image checkpoint configuration contains only safe serialized values."""
+    monkeypatch.setenv("RELCO_DATA_DIR", "/tmp")
+    monkeypatch.setenv("RELCO_OUT_DIR", "/tmp")
+    checkpoint_path = tmp_path / "checkpoint.pt"
+    torch.save(
+        {"config": _checkpoint_config(_resume_config()), "rng_state": capture_rng_state()},
+        checkpoint_path,
+    )
+
+    loaded = torch.load(checkpoint_path, weights_only=True)
+
+    assert loaded["config"]["dataset_root"] == "/tmp/data"
 
 
 @pytest.mark.parametrize(

@@ -102,7 +102,7 @@ def _load_best_model(run: RunSpec, config: Any, input_dim: int, device: torch.de
     """Load best model."""
     model = make_model(config, input_dim=input_dim).to(device)
     checkpoint_path = run.run_path / "checkpoints" / "run_00_categorical" / "best_model_checkpoint.pt"
-    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
+    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=True)
     model.load_state_dict(checkpoint["model_state_dict"])
     model.eval()
     return model
@@ -127,7 +127,7 @@ def load_or_compute_edge_resistances(
     cache_dir.mkdir(parents=True, exist_ok=True)
     cache_path = cache_dir / _edge_resistance_cache_key(data)
     if cache_path.exists():
-        loaded = np.load(cache_path)
+        loaded = np.load(cache_path, allow_pickle=False)
         return EdgeResistanceData(
             edges=loaded["edges"],
             weights=loaded["weights"],
@@ -711,7 +711,7 @@ def _sanity_checks(rows: list[dict[str, Any]], resistance_cache_dir: Path) -> di
         if match is None:
             continue
         num_nodes = int(match.group(1))
-        loaded = np.load(cache_path)
+        loaded = np.load(cache_path, allow_pickle=False)
         foster_sum = float(loaded["foster_sum"])
         expected = float(num_nodes - 1)
         absolute_error = abs(foster_sum - expected)

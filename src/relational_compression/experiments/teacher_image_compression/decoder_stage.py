@@ -207,7 +207,7 @@ def train_decoder_stage(
     elapsed_before_restart = 0.0
 
     if latest_path.exists():
-        checkpoint = torch.load(latest_path, map_location=device, weights_only=False)
+        checkpoint = torch.load(latest_path, map_location=device, weights_only=True)
         if checkpoint.get("config") != _config_dict_for_decoder_checkpoint(config):
             raise ValueError(f"Checkpoint config does not match this run: {latest_path}")
         decoder.load_state_dict(checkpoint["decoder_state_dict"])

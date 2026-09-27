@@ -93,7 +93,7 @@ cross_warm_start_closure_rounds: int = 1
 seed: int = 1337
 device: str = "cuda"
 
-source_geometry_cache_version: str = "trd_source_geometry_v2"
+source_geometry_cache_version: str = "trd_source_geometry_v3"
 source_geometry_cache_dir: Path | None = None
 source_geometry_solve_batch_size: int = 256
 random_partition_count: int = 256

@@ -1,4 +1,5 @@
 import random
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -28,6 +29,16 @@ def test_rng_state_round_trip_restores_python_numpy_and_torch_cpu() -> None:
         assert torch.equal(torch.rand(3), expected_torch)
     finally:
         restore_rng_state(state=original_state)
+
+
+def test_rng_state_can_be_loaded_with_weights_only(tmp_path: Path) -> None:
+    """Ensure checkpointed RNG state uses the safe Torch serialization subset."""
+    checkpoint_path = tmp_path / "rng_state.pt"
+    torch.save({"rng_state": capture_rng_state()}, checkpoint_path)
+
+    loaded = torch.load(checkpoint_path, weights_only=True)
+
+    assert isinstance(loaded["rng_state"]["numpy"]["keys"], torch.Tensor)
 
 
 def test_rng_state_round_trip_restores_cuda_state_when_available(monkeypatch: pytest.MonkeyPatch) -> None:

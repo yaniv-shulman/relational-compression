@@ -104,7 +104,7 @@ def _load_model(
     if not checkpoint_path.exists():
         raise FileNotFoundError(f"Missing best deterministic checkpoint: {checkpoint_path}")
 
-    checkpoint = cast(dict[str, Any], torch.load(checkpoint_path, map_location=device, weights_only=False))
+    checkpoint = cast(dict[str, Any], torch.load(checkpoint_path, map_location=device, weights_only=True))
     model = _make_model(config, stochastic=checkpoint.get("mode") == "stochastic").to(device)
     model.load_state_dict(checkpoint["model_state_dict"])
     model.eval()

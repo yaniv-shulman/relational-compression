@@ -122,7 +122,7 @@ def _config_dict(config: Any) -> dict[str, Any]:
             json.dumps(value, default=_json_default)
         except TypeError:
             continue
-        result[name] = value
+        result[name] = json.loads(json.dumps(value, default=_json_default))
     return result
 
 
@@ -425,7 +425,7 @@ def run_single_flowers102_experiment(
     )
 
     if latest_path.exists():
-        checkpoint = torch.load(latest_path, map_location=device, weights_only=False)
+        checkpoint = torch.load(latest_path, map_location=device, weights_only=True)
         if checkpoint.get("config") != _config_dict_for_representation_checkpoint(experiment_config):
             raise ValueError(f"Checkpoint config does not match this run: {latest_path}")
         student.load_state_dict(checkpoint["student_state_dict"])

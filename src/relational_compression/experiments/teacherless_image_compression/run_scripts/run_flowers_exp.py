@@ -102,7 +102,7 @@ def _config_dict(experiment_config: Any) -> dict[str, Any]:
         except TypeError:
             continue
 
-        result[name] = value
+        result[name] = json.loads(json.dumps(value, default=_json_default))
 
     return result
 
@@ -158,7 +158,7 @@ def _checkpoint_config_dict(
             "threshold_scale_min": float(getattr(experiment_config, "threshold_scale_min", 1e-3)),
         }
     )
-    return checkpoint_config
+    return cast(dict[str, Any], json.loads(json.dumps(checkpoint_config, default=_json_default)))
 
 
 def get_experiment_config() -> Any:
@@ -637,7 +637,7 @@ def run_single_flowers102_experiment(
     elapsed_before_restart = 0.0
 
     if resume_checkpoint_path.exists():
-        checkpoint = torch.load(resume_checkpoint_path, map_location=device, weights_only=False)
+        checkpoint = torch.load(resume_checkpoint_path, map_location=device, weights_only=True)
         if checkpoint.get("config") != checkpoint_config:
             raise ValueError(f"Checkpoint config does not match this run: {resume_checkpoint_path}")
         if checkpoint.get("mode") != mode or checkpoint.get("run_index") != run_index or checkpoint.get("seed") != seed:

@@ -266,6 +266,10 @@ def test_source_geometry_cache_round_trip(tmp_path: Path) -> None:
 
     first = load_or_compute_source_geometry(data, cache_dir=tmp_path)
     second = load_or_compute_source_geometry(data, cache_dir=tmp_path)
+    cache_path = next(tmp_path.rglob("*.npz"))
+    with np.load(cache_path, allow_pickle=False) as cached:
+        assert "metadata_json" in cached.files
+        assert all(cached[name].dtype != object for name in cached.files)
 
     assert torch.allclose(first.rho_fourier, second.rho_fourier)
     assert torch.allclose(first.rho_edge, second.rho_edge)

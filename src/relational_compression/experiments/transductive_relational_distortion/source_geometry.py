@@ -1,6 +1,7 @@
 """Source-derived graph-fidelity geometry and reusable cached summaries."""
 
 import hashlib
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -16,7 +17,7 @@ from relational_compression.experiments.graph_geometry import (
     compute_edge_effective_resistances,
 )
 
-SOURCE_GEOMETRY_CACHE_VERSION = "trd_source_geometry_v2"
+SOURCE_GEOMETRY_CACHE_VERSION = "trd_source_geometry_v3"
 EDGE = "edge"
 FOURIER = "fourier"
 COLLISION = "collision"
@@ -316,34 +317,34 @@ def save_source_geometry(path: Path, geometry: SourceGeometry) -> None:
         foster_sum=np.asarray(geometry.foster_sum, dtype=np.float64),
         collision_trace=np.asarray(geometry.collision_trace, dtype=np.float64),
         collision_entropy_denominator=np.asarray(geometry.collision_entropy_denominator, dtype=np.float64),
-        metadata=np.asarray([geometry.metadata], dtype=object),
+        metadata_json=np.asarray(json.dumps(geometry.metadata)),
     )
 
 
 def load_source_geometry(path: Path) -> SourceGeometry:
-    """Load source geometry."""
-    loaded = np.load(path, allow_pickle=True)
-    edges = loaded["edges"].astype(np.int64, copy=False)
-    metadata = dict(loaded["metadata"][0])
-    rho_collision_entropy = loaded["rho_collision_entropy"].astype(np.float64, copy=False)
-    return SourceGeometry(
-        num_nodes=int(metadata["num_nodes"]),
-        edge_index=torch.as_tensor(edges.T, dtype=torch.long).contiguous(),
-        edge_weight=torch.as_tensor(loaded["weights"], dtype=torch.float32),
-        degree=torch.as_tensor(loaded["degree"], dtype=torch.float32),
-        rho_edge=torch.as_tensor(loaded["rho_edge"], dtype=torch.float32),
-        rho_fourier=torch.as_tensor(loaded["rho_fourier"], dtype=torch.float32),
-        rho_collision=torch.as_tensor(loaded["rho_collision"], dtype=torch.float32),
-        rho_collision_entropy=None
-        if rho_collision_entropy.size == 0
-        else torch.as_tensor(rho_collision_entropy, dtype=torch.float32),
-        effective_resistance=torch.as_tensor(loaded["resistances"], dtype=torch.float64),
-        foster_sum=float(loaded["foster_sum"]),
-        collision_trace=float(loaded["collision_trace"]),
-        collision_entropy_denominator=float(loaded["collision_entropy_denominator"]),
-        collision_entropy=torch.as_tensor(loaded["collision_entropy"], dtype=torch.float64),
-        metadata=metadata,
-    )
+    """Load source geometry without unpickling cache content."""
+    with np.load(path, allow_pickle=False) as loaded:
+        edges = loaded["edges"].astype(np.int64, copy=False)
+        metadata = json.loads(str(loaded["metadata_json"].item()))
+        rho_collision_entropy = loaded["rho_collision_entropy"].astype(np.float64, copy=False)
+        return SourceGeometry(
+            num_nodes=int(metadata["num_nodes"]),
+            edge_index=torch.as_tensor(edges.T, dtype=torch.long).contiguous(),
+            edge_weight=torch.as_tensor(loaded["weights"], dtype=torch.float32),
+            degree=torch.as_tensor(loaded["degree"], dtype=torch.float32),
+            rho_edge=torch.as_tensor(loaded["rho_edge"], dtype=torch.float32),
+            rho_fourier=torch.as_tensor(loaded["rho_fourier"], dtype=torch.float32),
+            rho_collision=torch.as_tensor(loaded["rho_collision"], dtype=torch.float32),
+            rho_collision_entropy=None
+            if rho_collision_entropy.size == 0
+            else torch.as_tensor(rho_collision_entropy, dtype=torch.float32),
+            effective_resistance=torch.as_tensor(loaded["resistances"], dtype=torch.float64),
+            foster_sum=float(loaded["foster_sum"]),
+            collision_trace=float(loaded["collision_trace"]),
+            collision_entropy_denominator=float(loaded["collision_entropy_denominator"]),
+            collision_entropy=torch.as_tensor(loaded["collision_entropy"], dtype=torch.float64),
+            metadata=metadata,
+        )
 
 
 def load_or_compute_source_geometry(

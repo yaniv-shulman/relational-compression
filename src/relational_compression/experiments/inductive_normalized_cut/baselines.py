@@ -126,7 +126,7 @@ def evaluate_spectral_normalized_cut(
     """Evaluate or load the cached spectral normalized-cut reference."""
     cache_path = None if cache_dir is None else cache_dir / _graph_cache_key(data=data, config=config)
     if cache_path is not None and cache_path.exists():
-        cached = torch.load(cache_path, weights_only=False)
+        cached = torch.load(cache_path, weights_only=True)
         return cast(dict[str, Any], cached)
 
     labels = spectral_normalized_cut_partition(data=data, config=config)

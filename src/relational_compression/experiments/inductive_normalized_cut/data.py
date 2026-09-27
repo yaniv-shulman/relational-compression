@@ -88,6 +88,7 @@ class CachedMalNetTinyNormalizedCutDataset(Dataset[Data]):
     def __getitem__(self, index: int) -> Data:
         """Load one cached graph record."""
         item = self.index[index]
+        # Cached PyG Data records are custom objects rather than tensor/dict checkpoints.
         data = torch.load(self.cache_dir / self.split / item["path"], weights_only=False)
         if "y" in data:
             delattr(data, "y")
