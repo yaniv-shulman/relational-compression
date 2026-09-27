@@ -7,6 +7,27 @@ This repository contains the experiment code and paper sources for:
 
 Relational compression treats relational structure itself as the fidelity-bearing source content. The accompanying experiments study finite-codeword collision geometry through controlled synthetic, graph, and image realizations.
 
+## Background
+
+Many representations are constrained not primarily by the accuracy of individual reconstructed elements, but by how well they preserve relationships among elements: graph connectivity, pairwise geometry, or teacher-defined affinities, for example. Relational compression makes these choices explicit by separating the source relation, retained description, reconstructed or evaluated relation, fidelity criterion, and resource constraint.
+
+This separation distinguishes the representation from the decoder that interprets it, and realized codeword occupancy from a complete description-cost convention. It provides a common language for comparing mechanisms that otherwise begin from different settings, including graph summarization, spectral sparsification, similarity-preserving representations, and relational distillation.
+
+## What the Paper Contributes
+
+- A relational-compression framework that identifies the source relation, representation, reconstruction or evaluation rule, fidelity, and resource as separate components.
+- A finite-codeword collision realization that connects same-codeword probability with pair-specific alignment and separation, aggregate R'enyi-2 occupancy, and positive-spherical geometry.
+- Exact correspondences from inverse-aggregate-mass collision to squared-Euclidean centroid reconstruction and from graph-local inverse-mass affinity to normalized association and cut.
+- Five controlled studies that instantiate reconstruction-defined, graph-defined, and teacher-defined relational requirements within one constrained-representation formulation.
+
+## Experimental Studies
+
+1. **Synthetic centroid correspondence:** Numerically checks the exact inverse-mass-weighted centroid--pairwise identity, including encoder gradients, and separates assignment distortion from decoder reproduction mismatch.
+2. **Transductive graph fidelities:** Holds a finite graph-local representation and marginal-organization mechanism fixed while exchanging direct-edge, all-mode, transition-collision, and transition-entropy graph fidelities.
+3. **Inductive normalized cut:** Trains a shared finite-codeword graph encoder on MalNet-Tiny and evaluates its hard partitions on unseen graphs against normalized-cut and spectral references.
+4. **Reconstruction-defined image codes:** Trains a spatial hard-sign image bottleneck on Flowers102 through a joint reconstruction decoder, then examines how marginal organization changes hard-code occupancy and reconstruction quality.
+5. **Teacher-defined image relations:** Uses a frozen visual teacher to derive favored and disfavored patch relations on Flowers102, training an independent finite-code student through pair-specific collision without reconstruction or a marginal-organization penalty.
+
 ## Repository Layout
 
 ```text
@@ -17,14 +38,6 @@ paper/                LaTeX source, bibliography, and published figures
 data/                 Local dataset cache (ignored by Git)
 out/                  Generated experiment outputs (ignored by Git)
 ```
-
-The five maintained studies are:
-
-1. Synthetic centroid and pairwise-distortion correspondence
-2. Transductive graph relational-fidelity comparison
-3. Inductive normalized cut on MalNet-Tiny
-4. Reconstruction-trained finite image codes on Flowers102
-5. Teacher-defined finite image codes on Flowers102
 
 ## Requirements
 
