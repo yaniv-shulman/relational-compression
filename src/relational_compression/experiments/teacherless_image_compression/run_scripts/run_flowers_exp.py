@@ -133,6 +133,33 @@ def _as_experiment_config(experiment_config: Any) -> ExperimentConfig:
     )
 
 
+def _checkpoint_config_dict(
+    experiment_config: Any,
+    *,
+    model_config: ExperimentConfig,
+) -> dict[str, Any]:
+    """Collect configuration that affects resumed training."""
+    checkpoint_config = asdict(model_config)
+    checkpoint_config.update(
+        {
+            "num_epochs": int(experiment_config.num_epochs),
+            "max_train_batches": experiment_config.max_train_batches,
+            "max_val_batches": experiment_config.max_val_batches,
+            "min_learning_rate": float(getattr(experiment_config, "min_learning_rate", 0.0)),
+            "learning_rate_warmup_steps": int(getattr(experiment_config, "learning_rate_warmup_steps", 0)),
+            "learning_rate_warmup_start_factor": float(
+                getattr(experiment_config, "learning_rate_warmup_start_factor", 0.1)
+            ),
+            "separation_weight": float(getattr(experiment_config, "separation_weight", 0.0)),
+            "separation_temperature": float(getattr(experiment_config, "separation_temperature", 1.0)),
+            "separation_margin_gain": float(getattr(experiment_config, "separation_margin_gain", 3.0)),
+            "threshold_scale_ema_decay": float(getattr(experiment_config, "threshold_scale_ema_decay", 0.99)),
+            "threshold_scale_min": float(getattr(experiment_config, "threshold_scale_min", 1e-3)),
+        }
+    )
+    return checkpoint_config
+
+
 def get_experiment_config() -> Any:
     """Return get experiment config."""
     parser = argparse.ArgumentParser(description="Flowers102 teacherless image-compression experiment runner")
@@ -562,6 +589,7 @@ def run_single_flowers102_experiment(
     )
 
     model_config = _as_experiment_config(experiment_config)
+    checkpoint_config = _checkpoint_config_dict(experiment_config, model_config=model_config)
     model = _make_model(model_config, stochastic=stochastic).to(device)
     concentration_weight = float(getattr(experiment_config, "concentration_weight", model_config.concentration_weight))
     separation_weight = float(getattr(experiment_config, "separation_weight", 0.0))
@@ -609,8 +637,7 @@ def run_single_flowers102_experiment(
 
     if resume_checkpoint_path.exists():
         checkpoint = torch.load(resume_checkpoint_path, map_location=device, weights_only=False)
-        expected_config = asdict(model_config)
-        if checkpoint.get("config") != expected_config:
+        if checkpoint.get("config") != checkpoint_config:
             raise ValueError(f"Checkpoint config does not match this run: {resume_checkpoint_path}")
         if checkpoint.get("mode") != mode or checkpoint.get("run_index") != run_index or checkpoint.get("seed") != seed:
             raise ValueError(f"Checkpoint identity does not match this run: {resume_checkpoint_path}")
@@ -797,7 +824,7 @@ def run_single_flowers102_experiment(
             _atomic_torch_save(
                 value={
                     "model_state_dict": best_model_state,
-                    "config": asdict(model_config),
+                    "config": checkpoint_config,
                     "mode": mode,
                     "seed": seed,
                     "best_epoch": best_epoch,
@@ -811,7 +838,7 @@ def run_single_flowers102_experiment(
                 "model_state_dict": model.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
                 "scheduler_state_dict": scheduler.state_dict(),
-                "config": asdict(model_config),
+                "config": checkpoint_config,
                 "mode": mode,
                 "run_index": run_index,
                 "seed": seed,
