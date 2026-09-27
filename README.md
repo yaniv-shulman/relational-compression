@@ -1,3 +1,5 @@
+[![Linting and Tests](https://github.com/yaniv-shulman/relational-compression/actions/workflows/linting_and_tests.yml/badge.svg?branch=main)](https://github.com/yaniv-shulman/relational-compression/actions/workflows/linting_and_tests.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 # Relational Compression
 
 This repository contains the experiment code and paper sources for:
