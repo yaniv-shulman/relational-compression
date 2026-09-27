@@ -18,13 +18,13 @@ This separation distinguishes the representation from the decoder that interpret
 ## What the Paper Contributes
 
 - A relational-compression framework that identifies the source relation, representation, reconstruction or evaluation rule, fidelity, and resource as separate components.
-- A finite-codeword collision realization that connects same-codeword probability with pair-specific alignment and separation, aggregate R'enyi-2 occupancy, and positive-spherical geometry.
+- A finite-codeword collision realization that connects same-codeword probability with pair-specific alignment and separation, aggregate Rényi-2 occupancy, and positive-spherical geometry.
 - Exact correspondences from inverse-aggregate-mass collision to squared-Euclidean centroid reconstruction and from graph-local inverse-mass affinity to normalized association and cut.
 - Five controlled studies that instantiate reconstruction-defined, graph-defined, and teacher-defined relational requirements within one constrained-representation formulation.
 
 ## Experimental Studies
 
-1. **Synthetic centroid correspondence:** Numerically checks the exact inverse-mass-weighted centroid--pairwise identity, including encoder gradients, and separates assignment distortion from decoder reproduction mismatch.
+1. **Synthetic centroid correspondence:** Numerically checks the exact inverse-mass-weighted centroid–pairwise identity, including encoder gradients, and separates assignment distortion from decoder reproduction mismatch.
 2. **Transductive graph fidelities:** Holds a finite graph-local representation and marginal-organization mechanism fixed while exchanging direct-edge, all-mode, transition-collision, and transition-entropy graph fidelities.
 3. **Inductive normalized cut:** Trains a shared finite-codeword graph encoder on MalNet-Tiny and evaluates its hard partitions on unseen graphs against normalized-cut and spectral references.
 4. **Reconstruction-defined image codes:** Trains a spatial hard-sign image bottleneck on Flowers102 through a joint reconstruction decoder, then examines how marginal organization changes hard-code occupancy and reconstruction quality.

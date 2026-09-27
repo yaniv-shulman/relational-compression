@@ -85,6 +85,45 @@ def test_cuda_restore_requires_checkpoint_cuda_state(monkeypatch: pytest.MonkeyP
         restore_rng_state(state=state, restore_cuda=True)
 
 
+def test_restore_rng_state_rejects_non_tensor_torch_state() -> None:
+    """Reject checkpoint CPU RNG state that cannot be restored safely."""
+    state = capture_rng_state(include_cuda=False)
+    state["torch"] = "not-a-tensor"
+
+    with pytest.raises(ValueError, match="tensor-valued Torch CPU state"):
+        restore_rng_state(state=state, restore_cuda=False)
+
+
+def test_cuda_restore_rejects_non_tensor_cuda_state(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Reject checkpoint CUDA RNG state that cannot be restored safely."""
+    state = capture_rng_state(include_cuda=False)
+    state["torch_cuda"] = ["not-a-tensor"]
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+
+    with pytest.raises(ValueError, match="unsupported CUDA RNG state"):
+        restore_rng_state(state=state, restore_cuda=True)
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="requires CUDA")
+def test_restore_rng_state_normalizes_cuda_mapped_rng_tensors() -> None:
+    """Restore RNG state tensors mapped to CUDA back through CPU APIs."""
+    original_state = capture_rng_state(include_cuda=True)
+    mapped_state = capture_rng_state(include_cuda=True)
+    expected_cpu = torch.rand(3)
+    expected_cuda = torch.rand(3, device="cuda")
+    torch.rand(3)
+    torch.rand(3, device="cuda")
+    mapped_state["torch"] = mapped_state["torch"].cuda()
+    mapped_state["torch_cuda"] = [value.cuda() for value in mapped_state["torch_cuda"]]
+
+    try:
+        restore_rng_state(state=mapped_state, restore_cuda=True)
+        assert torch.equal(torch.rand(3), expected_cpu)
+        assert torch.equal(torch.rand(3, device="cuda"), expected_cuda)
+    finally:
+        restore_rng_state(state=original_state, restore_cuda=True)
+
+
 @pytest.mark.parametrize("missing_key", ("python", "numpy", "torch"))
 def test_restore_rng_state_rejects_incomplete_checkpoint_state(missing_key: str) -> None:
     """Reject checkpoint RNG states missing any required CPU state."""

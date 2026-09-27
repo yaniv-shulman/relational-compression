@@ -73,7 +73,10 @@ def restore_rng_state(state: Mapping[str, Any], *, restore_cuda: bool) -> None:
             float(numpy_state["cached_gaussian"]),
         )
     )
-    torch.set_rng_state(state["torch"])
+    torch_state = state["torch"]
+    if not isinstance(torch_state, torch.Tensor):
+        raise ValueError("RNG state is missing tensor-valued Torch CPU state")
+    torch.set_rng_state(torch_state.detach().cpu())
 
     if not restore_cuda:
         return
@@ -82,4 +85,6 @@ def restore_rng_state(state: Mapping[str, Any], *, restore_cuda: bool) -> None:
     cuda_state = state.get("torch_cuda")
     if cuda_state is None:
         raise ValueError("Checkpoint does not contain CUDA RNG state for the current CUDA run")
-    torch.cuda.set_rng_state_all(cuda_state)
+    if not isinstance(cuda_state, list) or not all(isinstance(value, torch.Tensor) for value in cuda_state):
+        raise ValueError("Checkpoint has an unsupported CUDA RNG state")
+    torch.cuda.set_rng_state_all([value.detach().cpu() for value in cuda_state])

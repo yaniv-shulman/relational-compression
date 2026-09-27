@@ -28,4 +28,4 @@ For corrections to experiments or reported results, include the corresponding co
 
 ## Pull Requests
 
-Describe the motivation, affected studies or manuscript sections, and validation performed. Keep unrelated formatting or refactoring out of the same pull request. By contributing, you agree that your work may be distributed under this repository's [MIT License](LICENSE).
+Describe the motivation, affected studies or manuscript sections, and validation performed. Keep unrelated formatting or refactoring out of the same pull request. By contributing, you agree that your work may be distributed under the repository's applicable license terms.
