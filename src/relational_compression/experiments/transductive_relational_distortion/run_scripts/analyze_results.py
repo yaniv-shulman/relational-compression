@@ -17,20 +17,12 @@ from relational_compression.experiments.transductive_relational_distortion.sourc
     FOURIER,
 )
 
-CRITERION_LABELS = {
-    EDGE: r"$D_E$",
-    FOURIER: r"$D_F$",
-    COLLISION: r"$D_C$",
-    COLLISION_ENTROPY: r"$D_{H_2}$",
-}
 CRITERION_STEMS = {
     EDGE: "D_E",
     FOURIER: "D_F",
     COLLISION: "D_C",
     COLLISION_ENTROPY: "D_H2",
 }
-SOURCE_ORDER = ("MalNet unweighted", "MalNet weighted", "COLLAB", "PROTEINS")
-CRITERION_ORDER = (EDGE, FOURIER, COLLISION, COLLISION_ENTROPY)
 
 
 def _read_csv(path: Path) -> list[dict[str, str]]:
@@ -261,73 +253,9 @@ def _validate_ranges(per_graph_rows: list[dict[str, str]]) -> dict[str, Any]:
     }
 
 
-def _figure_data(compact_rows: list[dict[str, Any]]) -> dict[str, Any]:
-    """Compute figure data."""
-    grouped: dict[str, dict[str, list[dict[str, Any]]]] = {
-        source: {criterion: [] for criterion in CRITERION_ORDER} for source in SOURCE_ORDER
-    }
-    for row in compact_rows:
-        source = str(row["source"])
-        criterion = str(row["criterion"])
-        if source not in grouped or criterion not in grouped[source]:
-            continue
-        grouped[source][criterion].append(
-            {
-                "lambda_org": float(row["lambda_org"]),
-                "hard_h2_mean": float(row["hard_h2_mean"]),
-                "hard_k_eff_mean": float(row["hard_k_eff_mean"]),
-                "hard_own_distortion_mean": float(row["hard_own_distortion_mean"]),
-                "num_graphs": int(row["num_graphs"]),
-            }
-        )
-    for source_data in grouped.values():
-        for rows in source_data.values():
-            rows.sort(key=lambda item: item["lambda_org"])
-    return grouped
-
-
-def _write_paper_figure(*, compact_rows: list[dict[str, Any]], output_dir: Path) -> None:
-    """Write paper figure."""
-    import matplotlib.pyplot as plt
-
-    data = _figure_data(compact_rows)
+def analyze_experiment(experiment_dir: Path, *, output_dir: Path) -> dict[str, Any]:
+    """Analyze transductive results from an experiment directory."""
     output_dir.mkdir(parents=True, exist_ok=True)
-    colors = {
-        EDGE: "#333333",
-        FOURIER: "#0072B2",
-        COLLISION: "#009E73",
-        COLLISION_ENTROPY: "#D55E00",
-    }
-    fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(7.2, 5.4), sharex=False, sharey=False, constrained_layout=True)
-    for axis, source in zip(axes.flat, SOURCE_ORDER, strict=True):
-        for criterion in CRITERION_ORDER:
-            rows = data[source][criterion]
-            if not rows:
-                continue
-            axis.plot(
-                [row["hard_h2_mean"] for row in rows],
-                [row["hard_own_distortion_mean"] for row in rows],
-                marker="o",
-                markersize=3.5,
-                linewidth=1.4,
-                color=colors[criterion],
-                label=CRITERION_LABELS[criterion],
-            )
-        axis.set_title(source)
-        axis.set_xlabel(r"hard $R_2=H_2(\bar q_G)$")
-        axis.set_ylabel("own hard distortion")
-        top = axis.secondary_xaxis("top", functions=(np.exp, np.log))
-        top.set_xlabel(r"$K_{\mathrm{eff}}$")
-        top.set_xticks([1, 2, 4, 8])
-        top.set_xticklabels(["1", "2", "4", "8"])
-    axes.flat[0].legend(fontsize=8, frameon=False)
-    fig.savefig(output_dir / "transductive_relational_distortion_sweep.png", dpi=200)
-    plt.close(fig)
-    _write_json(path=output_dir / "transductive_relational_distortion_sweep.json", value=data)
-
-
-def analyze_experiment(experiment_dir: Path, *, paper_figures_dir: Path | None = None) -> dict[str, Any]:
-    """Analyze experiment."""
     aggregate = _read_csv(experiment_dir / "aggregate_results.csv")
     per_graph = _read_csv(experiment_dir / "per_graph_results.csv")
     source_rho = _read_csv(experiment_dir / "source_rho_correlations.csv")
@@ -349,12 +277,12 @@ def analyze_experiment(experiment_dir: Path, *, paper_figures_dir: Path | None =
     if validation["post_selection_cross_objective_misses"]:
         raise ValueError("Post-selection cross-objective misses are nonzero")
 
-    _write_csv(path=experiment_dir / "final_analysis_aggregate_compact.csv", rows=compact)
-    _write_csv(path=experiment_dir / "final_analysis_transition_summary.csv", rows=_transition_summary(compact))
-    _write_csv(path=experiment_dir / "final_analysis_source_rho_pair_summary.csv", rows=source_rho_summary)
-    _write_csv(path=experiment_dir / "final_analysis_random_partition_pair_summary.csv", rows=random_partition_summary)
-    _write_csv(path=experiment_dir / "final_analysis_cross_objective_summary.csv", rows=cross_summary)
-    _write_csv(path=experiment_dir / "final_analysis_main_lambda_slices.csv", rows=_lambda_slices(compact))
+    _write_csv(path=output_dir / "final_analysis_aggregate_compact.csv", rows=compact)
+    _write_csv(path=output_dir / "final_analysis_transition_summary.csv", rows=_transition_summary(compact))
+    _write_csv(path=output_dir / "final_analysis_source_rho_pair_summary.csv", rows=source_rho_summary)
+    _write_csv(path=output_dir / "final_analysis_random_partition_pair_summary.csv", rows=random_partition_summary)
+    _write_csv(path=output_dir / "final_analysis_cross_objective_summary.csv", rows=cross_summary)
+    _write_csv(path=output_dir / "final_analysis_main_lambda_slices.csv", rows=_lambda_slices(compact))
 
     summary = {
         "experiment_dir": str(experiment_dir),
@@ -362,9 +290,7 @@ def analyze_experiment(experiment_dir: Path, *, paper_figures_dir: Path | None =
         "num_aggregate_rows": len(aggregate),
         "validation": validation,
     }
-    _write_json(path=experiment_dir / "final_analysis_summary.json", value=summary)
-    if paper_figures_dir is not None:
-        _write_paper_figure(compact_rows=compact, output_dir=paper_figures_dir)
+    _write_json(path=output_dir / "final_analysis_summary.json", value=summary)
     return summary
 
 
@@ -372,9 +298,11 @@ def main() -> None:
     """Run the command-line entry point."""
     parser = argparse.ArgumentParser(description="Analyze transductive relational-distortion outputs")
     parser.add_argument("experiment_dir", type=Path)
-    parser.add_argument("--paper-figures-dir", type=Path, default=None)
+    parser.add_argument("--output-dir", type=Path, default=None)
     args = parser.parse_args()
-    summary = analyze_experiment(args.experiment_dir, paper_figures_dir=args.paper_figures_dir)
+    experiment_dir = args.experiment_dir.absolute()
+    output_dir = args.output_dir.absolute() if args.output_dir is not None else experiment_dir / "analysis"
+    summary = analyze_experiment(experiment_dir, output_dir=output_dir)
     print(json.dumps(summary, indent=2))
 
 

@@ -18,8 +18,6 @@ from torch_geometric.data import Data
 
 from relational_compression.experiments.graph_geometry import (
     EdgeResistanceData,
-    _laplacian_from_edges,
-    _undirected_weighted_edges,
     compute_edge_effective_resistances,
     fourier_dirichlet_distortion,
 )
@@ -31,19 +29,6 @@ from relational_compression.experiments.inductive_normalized_cut.data import Pre
 from relational_compression.experiments.inductive_normalized_cut.metrics import hard_normalized_cut, soft_normalized_cut
 from relational_compression.experiments.inductive_normalized_cut.models import make_model
 
-__all__ = [
-    "EdgeResistanceData",
-    "_laplacian_from_edges",
-    "_undirected_weighted_edges",
-    "compute_edge_effective_resistances",
-    "fourier_dirichlet_distortion",
-]
-
-DEFAULT_RUN_ROOT = Path("out/reported_runs")
-DEFAULT_SWEEP_ID = "phase2_uniformity_seed_sweep_1788228910"
-_RUN_PATTERN = re.compile(
-    rf"inductive_normalized_cut_malnet_tiny_1\.0_relational_compression_{DEFAULT_SWEEP_ID}_uni(\d+)_seed(\d+)$"
-)
 _RESISTANCE_CACHE_PATTERN = re.compile(r".*_n(\d+)_e\d+\.npz$")
 
 
@@ -55,11 +40,6 @@ class RunSpec:
     run_path: Path
     separation_weight: float
     seed: int
-
-
-def _repo_root() -> Path:
-    """Compute repo root."""
-    return Path(__file__).resolve().parents[5]
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -75,27 +55,18 @@ def _load_run_config(run_path: Path) -> SimpleNamespace:
     return SimpleNamespace(**config)
 
 
-def discover_reported_runs(run_root: Path) -> list[RunSpec]:
-    """Discover reported runs."""
-    runs: list[RunSpec] = []
-    for path in sorted(run_root.iterdir()):
-        if not path.is_dir():
-            continue
-        match = _RUN_PATTERN.match(path.name)
-        if match is None:
-            continue
-        suffix, seed = match.groups()
-        runs.append(
-            RunSpec(
-                run_name=path.name,
-                run_path=path,
-                separation_weight=float(int(suffix)) / 100.0,
-                seed=int(seed),
-            )
-        )
-    if not runs:
-        raise FileNotFoundError(f"No reported MalNet sweep runs found under {run_root}")
-    return runs
+def _run_spec(run_path: Path) -> RunSpec:
+    """Load a run specification from an explicit experiment directory."""
+    if not run_path.is_dir():
+        raise FileNotFoundError(f"Experiment directory does not exist: {run_path}")
+
+    config = _load_run_config(run_path)
+    return RunSpec(
+        run_name=run_path.name,
+        run_path=run_path,
+        separation_weight=float(config.separation_weight),
+        seed=int(config.seed),
+    )
 
 
 def _preprocess_config(config: Any) -> PreprocessConfig:
@@ -787,9 +758,16 @@ def _print_summary(aggregate: dict[str, Any]) -> None:
 def main() -> None:
     """Run the command-line entry point."""
     parser = argparse.ArgumentParser(
-        description="Compute post-hoc graph-Fourier/Dirichlet distortion for reported MalNet partitions."
+        description="Compute post-hoc graph-Fourier/Dirichlet distortion for explicit MalNet experiment runs."
     )
-    parser.add_argument("--run-root", type=Path, default=DEFAULT_RUN_ROOT)
+    parser.add_argument(
+        "--run-dir",
+        type=Path,
+        action="append",
+        dest="run_dirs",
+        required=True,
+        help="Experiment directory containing effective_config.json and checkpoints; may be supplied multiple times.",
+    )
     parser.add_argument("--output-dir", type=Path, default=None)
     parser.add_argument("--spectral-cache-dir", type=Path, default=None)
     parser.add_argument("--device", type=str, default="auto")
@@ -799,8 +777,8 @@ def main() -> None:
     parser.add_argument("--max-runs", type=int, default=None)
     args = parser.parse_args()
 
-    run_root = args.run_root.resolve()
-    runs = discover_reported_runs(run_root)
+    run_dirs = [run_dir.resolve() for run_dir in args.run_dirs]
+    runs = [_run_spec(run_dir) for run_dir in run_dirs]
     if args.max_runs is not None:
         runs = runs[: int(args.max_runs)]
     reference_config = _load_run_config(runs[0].run_path)
@@ -810,7 +788,7 @@ def main() -> None:
 
     output_dir = args.output_dir
     if output_dir is None:
-        output_dir = run_root / "malnet_fourier_dirichlet_posthoc"
+        output_dir = Path("out/fourier_dirichlet_posthoc")
     output_dir = output_dir.resolve()
     resistance_cache_dir = output_dir / "effective_resistance_cache"
     spectral_cache_dir = args.spectral_cache_dir
@@ -825,7 +803,7 @@ def main() -> None:
 
     rows: list[dict[str, Any]] = []
     spectral_config = _spectral_config(reference_config)
-    print(f"Discovered {len(runs)} learned runs under {run_root}")
+    print(f"Processing {len(runs)} explicit learned runs")
     print(f"Using cleaned cache {preprocess_config.cache_dir}")
     print(f"Writing post-hoc results to {output_dir}")
     print(f"Model inference device: {device}")
@@ -880,7 +858,7 @@ def main() -> None:
     _write_csv(path=output_dir / "per_graph_fourier_dirichlet.csv", rows=rows)
     aggregate_json = {
         "metric": "D_F = sum_{cut edge e} w_e R_eff^G(e) / (n - 1)",
-        "run_root": str(run_root),
+        "run_dirs": [str(run.run_path) for run in runs],
         "preprocess_cache_dir": str(preprocess_config.cache_dir),
         "spectral_cache_dir": str(spectral_cache_dir),
         "splits": list(args.splits),

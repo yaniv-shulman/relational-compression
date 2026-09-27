@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch_geometric.data import Data
 
-from relational_compression.experiments.inductive_normalized_cut.run_scripts.compute_fourier_distortion import (
+from relational_compression.experiments.graph_geometry import (
     _laplacian_from_edges,
     _undirected_weighted_edges,
     compute_edge_effective_resistances,

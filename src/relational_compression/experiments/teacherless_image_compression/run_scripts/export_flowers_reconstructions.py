@@ -17,18 +17,10 @@ from relational_compression.experiments.teacherless_image_compression.data impor
 from relational_compression.models.image_autoencoder import BinaryImageAutoencoder
 from relational_compression.paths import get_experiments_dir
 
-DEFAULT_EXPERIMENT_NAMES = (
-    "teacherless_image_compression_flowers102_1_0_1787902232_mean_group",
-    "teacherless_image_compression_flowers102_1_0_1787911579_mean_group_32_bits",
-)
-DEFAULT_MODEL_LABELS = ("16-bit hard", "32-bit hard")
-
 
 def _parse_args() -> argparse.Namespace:
     """Parse args."""
-    parser = argparse.ArgumentParser(
-        description="Export Flowers102 original/reconstruction examples for the paper appendix."
-    )
+    parser = argparse.ArgumentParser(description="Export Flowers102 original/reconstruction examples.")
     parser.add_argument(
         "--experiment-name",
         action="append",
@@ -52,7 +44,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--display-size", type=int, default=128)
     parser.add_argument("--examples-per-row", type=int, default=2)
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
-    parser.add_argument("--output", type=Path, default=Path("paper/graphics/flowers102_reconstruction_examples.png"))
+    parser.add_argument("--output", type=Path, default=Path("out/flowers102_reconstruction_examples.png"))
     parser.add_argument("--metadata-output", type=Path, default=None)
     return parser.parse_args()
 
@@ -255,8 +247,10 @@ def _build_model_specs(experiments_dir: Path, experiment_names: list[str], label
 def main() -> None:
     """Run the command-line entry point."""
     args = _parse_args()
-    experiment_names = list(args.experiment_names or DEFAULT_EXPERIMENT_NAMES)
-    labels = list(args.model_labels or DEFAULT_MODEL_LABELS)
+    if args.experiment_names is None:
+        raise ValueError("At least one --experiment-name is required")
+    experiment_names = list(args.experiment_names)
+    labels = list(args.model_labels) if args.model_labels is not None else experiment_names
     experiments_dir = (
         args.experiments_dir.absolute() if args.experiments_dir is not None else _default_experiments_dir()
     )
