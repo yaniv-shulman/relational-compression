@@ -35,7 +35,7 @@ The five maintained studies are:
 
 ## Installation
 
-Install the project and development dependencies:
+Install the reproduction environment and development dependencies:
 
 ```bash
 poetry install --with dev

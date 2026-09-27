@@ -5,7 +5,6 @@ from datetime import timezone
 from pathlib import Path
 
 from relational_compression.experiments.teacher_image_compression.models import (
-    DINO_VITS8_CHECKPOINT_URL,
     DINO_VITS8_MODEL,
     DINO_VITS8_REPO,
 )
@@ -58,7 +57,6 @@ prefer_cross_image_neighbors: bool = True
 teacher_backend: str = "dino_vits8"
 teacher_repo: str = DINO_VITS8_REPO
 teacher_model_name: str = DINO_VITS8_MODEL
-teacher_checkpoint_url: str = DINO_VITS8_CHECKPOINT_URL
 teacher_cache_dir: Path = get_out_dir().joinpath("model_cache", "teacher_image_compression", "dino_vits8")
 teacher_download: bool = True
 fixed_random_teacher_embedding_dim: int = 64

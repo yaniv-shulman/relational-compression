@@ -77,7 +77,6 @@ _CONFIG_FIELD_NAMES = (
     "teacher_backend",
     "teacher_repo",
     "teacher_model_name",
-    "teacher_checkpoint_url",
     "teacher_cache_dir",
     "teacher_download",
     "fixed_random_teacher_embedding_dim",
@@ -267,7 +266,7 @@ def _teacher_metadata(config: Any) -> dict[str, Any]:
             "repo": getattr(config, "teacher_repo", DINO_VITS8_REPO),
             "source_revision": DINO_VITS8_SOURCE_REVISION,
             "model": getattr(config, "teacher_model_name", DINO_VITS8_MODEL),
-            "checkpoint_url": getattr(config, "teacher_checkpoint_url", DINO_VITS8_CHECKPOINT_URL),
+            "checkpoint_url": DINO_VITS8_CHECKPOINT_URL,
             "cache_dir": str(config.teacher_cache_dir),
         }
 

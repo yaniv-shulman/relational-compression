@@ -360,7 +360,6 @@ _REPRESENTATION_CHECKPOINT_CONFIG_FIELDS = (
     "teacher_backend",
     "teacher_repo",
     "teacher_model_name",
-    "teacher_checkpoint_url",
     "fixed_random_teacher_embedding_dim",
     "max_train_batches",
     "max_val_batches",

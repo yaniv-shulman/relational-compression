@@ -773,7 +773,6 @@ def test_representation_checkpoint_remains_resumable_after_decoder_config_change
         teacher_backend="fixed_random_patch",
         teacher_repo="unused",
         teacher_model_name="unused",
-        teacher_checkpoint_url="unused",
         fixed_random_teacher_embedding_dim=64,
         max_train_batches=None,
         max_val_batches=None,
@@ -958,6 +957,7 @@ def test_baseline_config_imports_without_network(monkeypatch, tmp_path) -> None:
     assert module.teacher_repo == DINO_VITS8_REPO
     assert DINO_VITS8_SOURCE_REVISION in module.teacher_repo
     assert module.teacher_model_name == "dino_vits8"
+    assert not hasattr(module, "teacher_checkpoint_url")
     assert module.bits == 16
     assert module.image_size == 256
     assert module.code_temperature == 0.25
