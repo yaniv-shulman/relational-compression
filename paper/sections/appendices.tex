@@ -1,0 +1,341 @@
+\section{Higher-Order Collision Geometry}
+\label{app:higher-order-collision-geometry}
+
+The main development uses the pairwise collision kernel $k_\theta\equiv k_{\theta,2}$, but the same event has an integer-order extension.
+For integer $\alpha\ge2$ and conditionally independent draws $Z_m\sim q_\theta(\cdot\mid x_m)$,
+\begin{equation}
+k_{\theta,\alpha}(x_1,\ldots,x_\alpha)
+=\sum_z\prod_{m=1}^{\alpha}q_\theta(z\mid x_m)
+=\Pr[Z_1=\cdots=Z_\alpha\mid x_1,\ldots,x_\alpha].
+\label{eq:higher-order-collision}
+\end{equation}
+A sequence converging to deterministic assignments gives the indicator that every element of the tuple belongs to the same hard class.
+At order two, $k_{\theta,2}(x,x')=k_\theta(x,x')$, recovering \cref{eq:collision-kernel}.
+Collision arity is a property of this representation statistic; it need not equal the arity of a source relation.
+
+For even order $\alpha=2m$, define the elementwise product feature
+\begin{equation}
+\phi_m(x_1,\ldots,x_m)
+=q_\theta(\cdot\mid x_1)\odot\cdots\odot q_\theta(\cdot\mid x_m).
+\end{equation}
+Then
+\begin{equation}
+k_{\theta,2m}(x_1,\ldots,x_{2m})
+=\langle\phi_m(x_1,\ldots,x_m),\phi_m(x_{m+1},\ldots,x_{2m})\rangle.
+\label{eq:even-order-kernel}
+\end{equation}
+It is an ordinary positive-semidefinite kernel on $m$-tuples.
+Odd order $2m+1$ gives the analogous inner product of $\phi_m$ and $\phi_{m+1}$, naturally a cross-affinity between tuple spaces of different arities rather than a symmetric kernel on individual inputs.
+
+\paragraph{Triplet-structured relational requirements}
+A learning objective may involve three inputs while being composed entirely from pairwise collision geometry.
+Writing $q_a:=q_\theta(\cdot\mid x_a)$, $q_p:=q_\theta(\cdot\mid x_p)$, and $q_n:=q_\theta(\cdot\mid x_n)$, and reusing the spherical map $u(q)$ from \cref{eq:sphere-map}, one triplet-structured angular objective is
+\begin{equation}
+\mathcal L_{\mathrm{trip}}
+=
+\left[
+\zeta-u(q_a)^\top u(q_p)+u(q_a)^\top u(q_n)
+\right]_+,
+\qquad \zeta>0.
+\end{equation}
+This objective compares pairwise normalized collisions from \cref{eq:normalized-collision}; it is not a third-order collision statistic.
+Angular comparison of high-dimensional graph representations also appears in graph summarization through cosine-distance spherical clustering~\citep{tsalouchidou2020scalable}.
+There it acts on graph-derived connectivity-history vectors, whereas here it acts on categorical assignment distributions, for which $1-u(q)^\top u(q')=1-\cos\vartheta$ is cosine distance and the underlying unnormalized inner product has a collision-probability interpretation.
+
+A genuine third-order collision instead requires all three independently encoded inputs to receive the same codeword:
+\begin{equation}
+k_{\theta,3}(x_a,x_p,x_n)
+=
+\sum_z q_\theta(z\mid x_a)q_\theta(z\mid x_p)q_\theta(z\mid x_n)
+=
+\Pr[Z_a=Z_p=Z_n].
+\end{equation}
+The related anchor--favored--disfavored event is
+\begin{equation}
+\Pr[Z_a=Z_p\ne Z_n]
+=
+\sum_z q_\theta(z\mid x_a)q_\theta(z\mid x_p)
+\bigl(1-q_\theta(z\mid x_n)\bigr)
+=
+k_\theta(x_a,x_p)-k_{\theta,3}(x_a,x_p,x_n),
+\end{equation}
+with hard-code limit
+\[
+\ind[c_\theta(x_a)=c_\theta(x_p),\;c_\theta(x_a)\ne c_\theta(x_n)].
+\]
+Thus source-relation arity, learning-objective arity, and collision-event order are distinct modelling choices.
+
+For iid inputs $X_1,\ldots,X_\alpha\sim\mu$,
+\begin{equation}
+\E[k_{\theta,\alpha}(X_1,\ldots,X_\alpha)]
+=\sum_zq_Z(z)^\alpha.
+\label{eq:higher-order-population-collision}
+\end{equation}
+The factorization follows by independence of the $\alpha$ inputs.
+At $\alpha=2$, this identity recovers \cref{eq:population-collision}.
+Consequently, integer-order R\'enyi entropy~\citep{renyi1961measures} satisfies
+\begin{equation}
+H_\alpha(q_Z)
+=\frac1{1-\alpha}\log\sum_zq_Z(z)^\alpha
+=-\frac1{\alpha-1}\log\E[k_{\theta,\alpha}].
+\label{eq:renyi-alpha-collision}
+\end{equation}
+The case $\alpha=2$ recovers \cref{eq:collision-entropy}.
+The literal $\alpha$-way same-code event is defined here for integer $\alpha\ge2$, whereas the R\'enyi family extends to appropriate real orders under its usual conventions.
+Shannon entropy arises through the continuous limit $\alpha\to1$, not from a nontrivial one-sample collision event.
+
+For a fixed positive reference $r$, define
+\begin{equation}
+a_{\alpha,r}(x_1,\ldots,x_\alpha)
+=\sum_zr(z)^{1-\alpha}\prod_{m=1}^{\alpha}q_\theta(z\mid x_m).
+\end{equation}
+$a_{2,r}(x,x')=a_r(x,x')$ recovers the reference-weighted affinity in \cref{eq:reference-affinity}.
+Its expectation is $\sum_zq_Z(z)^\alpha r(z)^{1-\alpha}$, giving
+\begin{equation}
+D_\alpha(q_Z\|r)
+=\frac1{\alpha-1}\log\E[a_{\alpha,r}].
+\label{eq:renyi-alpha-reference-affinity}
+\end{equation}
+For a uniform reference,
+\begin{equation}
+D_\alpha(q_Z\|U_K)=\log K-H_\alpha(q_Z).
+\label{eq:uniform-renyi-alpha}
+\end{equation}
+At $\alpha=2$, this reduces to \cref{eq:uniform-renyi}.
+This includes the usual limiting and support conventions at orders one and zero.
+At fixed $K$, minimizing this divergence as an organization penalty encourages larger occupancy entropy, whereas adding $+\lambda H_\alpha(q_Z)$ to a minimized objective encourages concentration.
+
+\subsection{R\'enyi entropy in spherical coordinates}
+\label{app:renyi-spherical-coordinates}
+
+The integer-event interpretation and the real-order entropy family should be distinguished.
+For $\alpha>0$, $\alpha\ne1$, let $u=u(q)$ be the spherical map from \cref{eq:sphere-map}.
+Substitution of $q_i=u_i/\|u\|_1$ yields
+\begin{equation}
+H_\alpha(q)
+=\frac1{1-\alpha}\left[\log\sum_i u_i^\alpha-\alpha\log\|u\|_1\right].
+\label{eq:renyi-spherical}
+\end{equation}
+At order two, $\sum_i u_i^2=1$ gives $H_2(q)=2\log\|u\|_1$.
+Taking the order-one limit gives \cref{eq:shannon-spherical}.
+All these quantities can be expressed in the same coordinates, but higher power sums generally depend on more than one ordinary spherical angle.
+
+\section{Conditional Collision and Dependence}
+\label{app:conditional-collision-dependence}
+
+The aggregate population collision and $H_2(q_Z)$ developed in \cref{eq:population-collision,eq:collision-entropy} describe how a finite code is occupied and organized across a population, but they do not by themselves determine how strongly the sampled code depends on its input.
+In particular, broad aggregate occupancy can arise even from an input-independent encoder.
+This appendix records two collision-related dependence functionals that make this distinction explicit: one compares conditional self-collision with aggregate population collision, whereas the other uses R\'enyi divergence of the induced input--code joint distribution from its independent product.
+It also distinguishes input--code dependence from dependence between relational endpoints, for which collision alignment observes only the same-codeword event.
+
+Let $X,X'\overset{\mathrm{iid}}{\sim}\mu$.
+Using the collision kernel and self-collision in \cref{eq:collision-kernel,eq:self-collision}, together with the aggregate code distribution and population collision identity in \cref{eq:aggregate-code,eq:population-collision}, define
+\begin{equation}
+\kappa_{\mathrm{self}}
+:=\E_X[k_\theta(X,X)]
+=\E_X\sum_zq_\theta(z\mid X)^2,
+\qquad
+\kappa_{\mathrm{pop}}
+:=\E_{X,X'\overset{\mathrm{iid}}{\sim}\mu}[k_\theta(X,X')]
+=\sum_zq_Z(z)^2.
+\end{equation}
+The conditional collision-entropy functional is
+\begin{equation}
+H_2^{\mathrm{coll}}(Z\mid X)=-\log \kappa_{\mathrm{self}},
+\end{equation}
+Because the logarithm is taken after averaging conditional self-collision, this functional is generally not equal to $\E_X[H_2(q_\theta(\cdot\mid X))]$.
+Using the collision entropy $H_2(q_Z)$ from \cref{eq:collision-entropy}, a corresponding difference is
+\begin{equation}
+I_2^{\mathrm{coll}}(X;Z)
+=H_2(q_Z)-H_2^{\mathrm{coll}}(Z\mid X)
+=\log\frac{\kappa_{\mathrm{self}}}{\kappa_{\mathrm{pop}}}.
+\label{eq:collision-information}
+\end{equation}
+It is nonnegative because
+\begin{equation}
+\kappa_{\mathrm{self}}-\kappa_{\mathrm{pop}}
+=\sum_z\operatorname{Var}_\mu(q_\theta(z\mid X))\ge0.
+\end{equation}
+It vanishes exactly when the assignment vector is constant almost surely, equivalently when the sampled code is independent of the input under this population model.
+For deterministic assignments, $\kappa_{\mathrm{self}}=1$ and the difference equals $H_2(q_Z)$.
+No general data-processing or unique R\'enyi-mutual-information characterization is asserted for this entropy difference.
+
+Let $P_X$ denote the distribution of $X$, so $P_X=\mu$, and let $P_{XZ}$ be the joint distribution induced by $P_X$ and $q_\theta(\cdot\mid X)$; its $Z$-marginal is the aggregate distribution $q_Z$ from \cref{eq:aggregate-code}.
+Using the inverse-mass affinity of \cref{eq:qz-affinity}, a divergence-based quantity has a different form:
+\begin{equation}
+I_2^D(X;Z)
+=D_2\!\left(P_{XZ}\,\middle\|\,P_X\otimes q_Z\right)
+=\log\E_X[a_{q_Z}(X,X)].
+\label{eq:divergence-renyi-information-affinity}
+\end{equation}
+The expansion follows on the active support from the density ratio $q_\theta(z\mid x)/q_Z(z)$.
+For deterministic assignments, its exponential is the number of active words, so $I_2^D=R_0=\log|\operatorname{supp}(q_Z)|$ from \cref{eq:finite-state-rate-hierarchy} rather than $H_2(q_Z)$.
+The two functionals illustrate why an unqualified reference to R\'enyi mutual information would be ambiguous here.
+
+There is a further distinction between input--code dependence and dependence of relational endpoints.
+For $(\mathsf V,\mathsf V')\sim P_{\mathrm{pair}}$ as in \cref{eq:generic-relational-objective}, with endpoints encoded independently from $q_\theta(\cdot\mid x_{\mathsf V})$ and $q_\theta(\cdot\mid x_{\mathsf V'})$, the full joint distribution of $(Z,Z')$ can contain information beyond the equality event.
+Collision alignment measures only
+\begin{equation}
+\Pr[Z=Z']=\E_{(\mathsf V,\mathsf V')\sim P_{\mathrm{pair}}}[k_\theta(x_{\mathsf V},x_{\mathsf V'})].
+\end{equation}
+It is an equality-specific statistic, not the full mutual information between the endpoints.
+
+\section{Additional Monotone Content Examples}
+\label{app:path-walk-content}
+
+The main text defines content-based relational fidelity by choosing a nonnegative structural-content functional $\mathcal I$ that is monotone under an admissible simplification and measuring the resulting content loss through \cref{eq:relational-content-monotone,eq:relational-content-distortion}.
+The direct-edge realization in \cref{eq:edge-distortion} uses retained edge weight, but the same construction can emphasize structure induced by several relations rather than individual edge entries.
+This appendix records shortest-path, walk, and natural-connectivity examples to make that latitude concrete; they are illustrative alternatives and are not evaluated in the experiments.
+
+For a graph $G=(V,E)$ with positive edge lengths and an edge-deletion simplification $\widetilde G$ on the same carrier, let $d_G(i,j)$ be shortest-path distance, using infinity when no path exists.
+If $\varphi:[0,\infty]\to\R_{\ge0}$ is nonincreasing and $\varphi(\infty)=0$, then
+\begin{equation}
+\mathcal I_\varphi(G)=\sum_{i<j}\varphi(d_G(i,j))
+\end{equation}
+is monotone under edge deletion.
+Deleting edges cannot shorten a path.
+For example, with $\varphi(d)=e^{-d/\tau}$ and $\tau>0$, the corresponding specialization of the generic content distortion in \cref{eq:relational-content-distortion} is
+\begin{equation}
+D_\varphi(G,\widetilde G)
+=\sum_{i<j}\left[e^{-d_G(i,j)/\tau}-e^{-d_{\widetilde G}(i,j)/\tau}\right].
+\end{equation}
+This values the geometry supported by paths rather than only the removed edge entries.
+For weight attenuation, a relationship between weights and lengths would additionally need to be specified.
+
+For the nonnegative weighted adjacency $W$ used in \cref{sec:edge-cut-distortion}, and an admissible attenuation with reconstructed adjacency $\widetilde W$, finite walk content can be written
+\begin{equation}
+\mathcal I_{\mathrm{walk}}(G)
+=\sum_{\ell=1}^{L_0}\alpha_\ell\mathbf1^\top W^\ell\mathbf1,
+\qquad\alpha_\ell\ge0.
+\end{equation}
+Each term counts weighted walk mass of one length.
+If $0\le\widetilde W\le W$ entrywise, induction using nonnegative matrix multiplication gives $0\le\widetilde W^\ell\le W^\ell$ entrywise.
+Hence the content is monotone under attenuation.
+The truncation $L_0$ is used to avoid confusing the walk length limit with the graph Laplacian $L$.
+
+Natural connectivity is an established spectral example~\citep{wu2010natural}.
+For a finite undirected unweighted graph $G=(V,E)$ with adjacency $A$ and $n=|V|$,
+\begin{equation}
+\mathcal I_{\mathrm{NC}}(G)
+=\log\left(\frac{\operatorname{tr}(e^A)}{n}\right)
+=\log\left(\frac1n\sum_r e^{\lambda_r(A)}\right).
+\end{equation}
+The expansion $\operatorname{tr}(e^A)=\sum_{\ell\ge0}\operatorname{tr}(A^\ell)/\ell!$ connects it to closed walks.
+It is zero for the empty graph and strictly increases when an edge is added in this standard setting.
+Natural connectivity supplies an established structural-content functional for this construction.
+
+Direct edge content in \cref{eq:edge-distortion} treats each primitive relation according to its weight, shortest-path content responds to induced connectivity geometry, finite walk content measures multistep structure, and natural connectivity provides an all-orders closed-walk spectral example.
+A fidelity criterion may combine monotone contents with nonnegative coefficients, with its interpretation tied to the declared combination of relational properties.
+
+\section{Reported Metrics and Numerical Conventions}
+\label{app:metric-definitions}
+
+This appendix collects the definitions of recurring metrics reported in the experiments and the aggregation conventions needed to interpret them.
+Metrics defined earlier retain the same notation and are referenced back to their original definitions.
+
+\subsection{Hard finite codes}
+
+For $N$ evaluated hard codewords $c(i)\in\mathcal Z$, let
+\begin{equation}
+\widehat q_Z(z)
+=\frac1N\sum_{i=1}^N\ind[c(i)=z].
+\end{equation}
+The distribution $\widehat q_Z$ is the empirical codeword distribution over the evaluated hard tokens and is the empirical counterpart of the aggregate distribution $q_Z$ introduced in \cref{eq:aggregate-code}.
+
+Aggregate hard collision is the probability that two independent draws from $\widehat q_Z$ receive the same codeword:
+\begin{equation}
+\widehat\kappa_{\mathrm{pop}}
+=\sum_z\widehat q_Z(z)^2,\qquad
+\widehat H_2
+=-\log\widehat\kappa_{\mathrm{pop}},\qquad
+K_{\mathrm{eff}}
+=\widehat\kappa_{\mathrm{pop}}^{-1}.
+\end{equation}
+Here $\widehat\kappa_{\mathrm{pop}}$ is the empirical same-code collision, $\widehat H_2$ is the hard-code collision entropy, and $K_{\mathrm{eff}}$ is the collision-effective number of codewords.
+They are the empirical counterparts of the population quantities in \cref{eq:population-collision,eq:collision-entropy,eq:effective-code-count}.
+The reported number of active hard words is $|\{z:\widehat q_Z(z)>0\}|$.
+
+For the $32\times32$ latent grid on $256\times256$ images,
+\[
+\mathrm{bpp}
+=\frac{32^2b}{256^2}
+=\frac{b}{64}.
+\]
+This is the nominal raw latent bit capacity used in Study~4 before entropy coding.
+
+\subsection{Graph partitions}
+
+For a hard assignment $c$, use the classes $V_z=\{i:c(i)=z\}$ from \cref{prop:normalized-cut}, with
+\[
+\operatorname{vol}(G)=\sum_i d_i,\qquad
+\operatorname{vol}(V_z)=\sum_{i\in V_z}d_i.
+\]
+Using directed symmetric edge incidences,
+\[
+\operatorname{assoc}(V_z,V_z)
+=\sum_{(i,j)\in\vec E:i,j\in V_z}W_{ij}.
+\]
+The reported hard fixed-$K$ normalized cut is the specialization in \cref{eq:hard-ncut}:
+\[
+\operatorname{NAssoc}(G)
+=\sum_{z:\operatorname{vol}(V_z)>0}
+\frac{\operatorname{assoc}(V_z,V_z)}{\operatorname{vol}(V_z)},\qquad
+\operatorname{Ncut}(G)
+=K-\operatorname{NAssoc}(G).
+\]
+Under the fixed-$K$ convention, an empty class contributes zero association and therefore one unit to $\operatorname{Ncut}(G)$.
+The reported largest hard volume fraction is $\max_z\operatorname{vol}(V_z)/\operatorname{vol}(G)$, and active hard classes are those with positive volume.
+The graph-fidelity values reported in Study~2 are the hard specializations of $D_E$, $D_F$, $D_C$, and $D_{H_2}$ defined in \cref{eq:normalized-edge-distortion,eq:source-normalized-dirichlet-distortion,eq:source-collision-edge-distortion,eq:entropy-probe-distortion}.
+The post-hoc $D_F$ reported in Study~3 uses the hard-partition form in \cref{eq:hard-partition-dirichlet-distortion}.
+
+For graph-local assignments, $\bar q_G(z)$ is the degree-weighted occupancy defined in \cref{eq:graph-aggregate-code}.
+The reported organization metrics are
+\[
+H_2(\bar q_G)
+=-\log\sum_z\bar q_G(z)^2,\qquad
+K_{\mathrm{eff}}
+=\left(\sum_z\bar q_G(z)^2\right)^{-1},
+\]
+\[
+D_2(\bar q_G\|U_K)
+=\log K-H_2(\bar q_G)
+=\log\left(K\sum_z\bar q_G(z)^2\right).
+\]
+Following \cref{eq:collision-entropy,eq:effective-code-count,eq:uniform-renyi}, $H_2(\bar q_G)$ is graph-local collision occupancy, $K_{\mathrm{eff}}$ is the corresponding collision-effective number of classes, and $D_2(\bar q_G\|U_K)$ measures deviation from uniform graph-local occupancy.
+These quantities are computed graph-locally before averaging across evaluated graphs.
+Consequently, the mean of $K_{\mathrm{eff}}$ is not generally the exponential of the mean $H_2$, and mean $D_2$ cannot be converted to a mean effective count by exponentiation.
+The learned MalNet results report the mean and sample standard deviation across five seeds, while the spectral reference is deterministic for the stated solver configuration.
+
+\subsection{Teacher relations and reconstruction}
+
+As introduced in \cref{sec:flowers102-teacher-experiment}, the favored and disfavored weighted hard-code collision rates are
+\begin{equation}
+\begin{aligned}
+\widehat\kappa_+&=\frac{\sum_{ij}S_{+,ij}\ind[c(i)=c(j)]}{\sum_{ij}S_{+,ij}},\\
+\widehat\kappa_-&=\frac{\sum_{ij}S_{-,ij}\ind[c(i)=c(j)]}{\sum_{ij}S_{-,ij}}.
+\end{aligned}
+\end{equation}
+The pooled empirical hard-code collision is $\widehat\kappa_{\mathrm{pop}}$ as defined above.
+Favored-pair enrichment is $\widehat\kappa_+/\widehat\kappa_{\mathrm{pop}}$, while disfavored-pair suppression is $1-\widehat\kappa_-/\widehat\kappa_{\mathrm{pop}}$.
+The reported favored and disfavored teacher-cosine summaries are the corresponding relation-weighted means:
+\[
+\frac{\sum_{ij}S_{\pm,ij}\,e_i^\top e_j}
+{\sum_{ij}S_{\pm,ij}}.
+\]
+Validation and test teacher loss use the alignment and relational-separation terms of \cref{eq:dino-teacher-loss}, with their numerators aggregated using the corresponding $S_+$ and $S_-$ weight masses before forming the final average.
+
+For a unit-range RGB image $x$ and reconstruction $\widehat x$,
+\[
+\operatorname{MSE}(x,\widehat x)
+=\frac{1}{3HW}\|x-\widehat x\|_2^2.
+\]
+Reported MSE averages this squared pixel error over the evaluated images.
+For unit-range images,
+\[
+\operatorname{PSNR}
+=-10\log_{10}(\operatorname{MSE}),
+\]
+so higher PSNR corresponds to lower MSE.
+MS-SSIM is the standard multiscale structural similarity diagnostic of \citet{wang2003multiscale}.
+
+\input{sections/experimental_appendices}

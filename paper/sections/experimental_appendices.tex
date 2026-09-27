@@ -1,0 +1,415 @@
+\section{Synthetic Study Details}
+\label{app:synthetic-details}
+
+The synthetic study uses one fixed finite dataset and evaluates every point pair exactly.
+Two copies of the same encoder are initialized identically and optimized using the centroid and inverse-mass-weighted pairwise forms, respectively.
+The separate decoder calculation holds the encoder assignments fixed.
+These checks verify the finite-sample centroid--pairwise identity in \cref{eq:finite-soft-pairwise} and the decoder decomposition in \cref{eq:decoder-centroid-decomposition}.
+If $g_{\mathrm{cent}}$ and $g_{\mathrm{pair}}$ are the flattened encoder gradients of the centroid and pairwise objectives, their reported gradient agreement uses cosine similarity and relative error
+\[
+\frac{\|g_{\mathrm{cent}}-g_{\mathrm{pair}}\|_2}
+{\|g_{\mathrm{cent}}\|_2}.
+\]
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabularx}{\linewidth}{Xr}
+\toprule
+Diagnostic & Observed value \\
+\midrule
+Maximum $|D_{\mathrm{cent}}-D_{\mathrm{pair}}|$, centroid-trained trajectory & $9.54\times10^{-7}$ \\
+Maximum $|D_{\mathrm{cent}}-D_{\mathrm{pair}}|$, pair-trained trajectory & $9.54\times10^{-7}$ \\
+Larger trajectory mean of $|D_{\mathrm{cent}}-D_{\mathrm{pair}}|$ & $4.20\times10^{-8}$ \\
+Random encoder states: maximum $|D_{\mathrm{cent}}-D_{\mathrm{pair}}|$ & $1.91\times10^{-6}$ \\
+Random encoder states: mean $|D_{\mathrm{cent}}-D_{\mathrm{pair}}|$ & $2.64\times10^{-7}$ \\
+Initial gradient cosine / relative error & $1.000\,/\,1.54\times10^{-7}$ \\
+Final gradient cosine / largest relative error across final models & $1.000\,/\,1.35\times10^{-6}$ \\
+Final parameter RMS difference between the centroid- and pairwise-trained encoders & $3.56\times10^{-8}$ \\
+Random states: mean $|D_{\mathrm{cent}}-KD_{\mathrm{raw}}|$ & $4.79$ \\
+Random states: maximum $|D_{\mathrm{cent}}-KD_{\mathrm{raw}}|$ & $21.69$ \\
+Decoder excess term in \cref{eq:decoder-centroid-decomposition}, steps $0\to200$ & $21.05\to8.15\times10^{-5}$ \\
+Maximum decoder decomposition residual & $1.91\times10^{-6}$ \\
+\bottomrule
+\end{tabularx}
+\caption{Synthetic numerical diagnostics. Values near $10^{-6}$ reflect single-precision arithmetic.}
+\label{tab:synthetic-collision-centroid}
+\end{table}
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{0.28\linewidth}X}
+\toprule
+Component & Setting \\
+\midrule
+Data & 768 points in $\R^2$ from a six-component Gaussian mixture \\
+Mixture weights & $(0.30,0.22,0.17,0.13,0.10,0.08)$ \\
+Realized component counts & $(230,169,131,100,77,61)$ \\
+Encoder & MLP with two hidden layers, width 32, $\tanh$ nonlinearities \\
+Code distribution & Exact enumeration of $2^3=8$ factorized Bernoulli words \\
+Code temperature & 0.7 \\
+Encoder optimization & SGD, learning rate 0.02, momentum 0.9, 300 steps \\
+Random-state check & 128 random affine-logit maps; weight/bias scale log-uniform in $[0.25,4.0]$ \\
+Decoder check & Learned $8\times2$ reproduction codebook, SGD learning rate 0.15, 200 steps \\
+Decoder initialization & Gaussian reproduction vectors with scale 3.0 \\
+Seed & 1337 \\
+\bottomrule
+\end{tabularx}
+\caption{Settings for Study 1.}
+\label{tab:synthetic-settings}
+\end{table}
+
+\section{Transductive Relational-Fidelity Study Details}
+\label{app:transductive-relational-distortion-details}
+
+The transductive study optimizes a separate logit matrix for each source graph, fidelity, and organization weight.
+The two MalNet collections use the same 20 cleaned MalNet-Tiny test topologies.
+The weighted variant assigns deterministic positive lognormal weights, with scale $\sigma=0.75$, mean-normalized within each graph, and global seed 91337.
+COLLAB and PROTEINS each contribute 20 cleaned largest connected components from TUDataset.
+All labels are removed or ignored.
+
+The solver uses ten random initializations and one collapse-biased initialization, retaining the best target soft objective encountered in each optimization.
+After these ordinary restarts, each target is warm-started from the other criteria's selected logits; if this improves any target, one closure pass is run from the updated solutions.
+Final selection uses the target soft objective across all candidates.
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{0.28\linewidth}X}
+\toprule
+Component & Setting \\
+\midrule
+Collections & 20 MalNet-Tiny test LCCs; the same 20 weighted topologies; 20 COLLAB; 20 PROTEINS \\
+Base graph-selection seed & 1337; deterministic collection-specific offsets for COLLAB and PROTEINS \\
+Minimum source size & 512 nodes for MalNet; 16 nodes for TUDataset, after LCC extraction \\
+Training fidelities & $D_E$, $D_F$, $D_C$, and $D_{H_2}$ where defined \\
+Entropy-field exclusions & Omit $D_{H_2}$ when its source Dirichlet denominator is zero; two selected COLLAB graphs are excluded from this criterion \\
+Representation & Free graph-local $n\times8$ categorical logits; no learned encoder \\
+Assignment temperature & $\tau=1.0$ \\
+Organization weights & $0$, $0.03$, $0.05$, $0.07$, $0.08$, $0.09$, $0.10$, $0.11$, $0.12$, $0.14$, $0.16$, $0.18$, $0.20$, $0.30$, $0.50$ \\
+Objective & $D_\rho(q)+\lambda_{\mathrm{org}}D_2(\bar q_G\|U_8)$ \\
+Optimizer & Adam, learning rate 0.05, 600 steps, no scheduler \\
+Random initialization & Gaussian logits with standard deviation $10^{-2}$ \\
+Random restart seeds & 1337, 2024, 31415, 2718, 1618, 9001, 42, 73, 101, 211 \\
+Collapse-biased restart & Initial logit bias 4.0 toward one state \\
+Warm starts & Cross-criterion pass from the other selected solutions; one closure pass if the first pass improves any target \\
+Selection & Best target soft objective across ordinary restarts and cross-criterion candidates \\
+Diagnostics & Hard/soft cross-evaluation, source-importance similarities, and 256 size-balanced random partitions per graph \\
+Random-partition seed & $1337+\text{graph index}$ \\
+\bottomrule
+\end{tabularx}
+\caption{Settings for Study 2.}
+\label{tab:transductive-relational-distortion-settings}
+\end{table}
+
+\subsection{Matched occupancy and cross-distortion transfer}
+
+Hard partitions are compared at target $H_2(\bar q_G)$ values from 0.25 to 2.0 nats.
+Each selected solution must be within 0.10 nats of the target, and the compared pair must be within 0.10 nats of one another.
+Each criterion selects its solution independently from the available sweep before this matching rule is applied.
+At least five matched graphs are required to display a point in the agreement figures.
+Consequently, different source/criterion comparisons can use different subsets, and missing targets reflect available coverage rather than an interpolation through unobserved solutions.
+
+\Cref{tab:transductive-rate-matched-agreement} preserves the detailed comparison at 2.0 nats.
+Let $c_A$ and $c_B$ denote the partitions trained under fidelities $A$ and $B$, respectively.
+The directional transfer differences are
+\[
+\Delta_{A\to B}=D_B(c_A)-D_B(c_B),
+\qquad
+\Delta_{B\to A}=D_A(c_B)-D_A(c_A).
+\]
+Each difference is measured on the destination fidelity's scale.
+Because matching is approximate and selection uses the soft training objective, these descriptive differences can be slightly negative.
+
+\begin{table}[htbp]
+\centering\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{llrrrr}
+\toprule
+Source & Pair & $n$ & Mean ARI & $\Delta_{A\to B}$ & $\Delta_{B\to A}$ \\
+\midrule
+MalNet unweighted & $D_F$ / $D_C$ & 20 & 0.781 & -0.0025 & 0.0060 \\
+MalNet unweighted & $D_F$ / $D_{H_2}$ & 20 & 0.166 & 0.0919 & 0.0698 \\
+MalNet unweighted & $D_C$ / $D_{H_2}$ & 20 & 0.196 & 0.1068 & 0.0744 \\
+MalNet weighted & $D_F$ / $D_C$ & 20 & 0.714 & 0.0011 & 0.0063 \\
+MalNet weighted & $D_F$ / $D_{H_2}$ & 20 & 0.116 & 0.0785 & 0.0638 \\
+MalNet weighted & $D_C$ / $D_{H_2}$ & 20 & 0.157 & 0.0834 & 0.0864 \\
+COLLAB & $D_F$ / $D_C$ & 5 & 0.714 & 0.0258 & 0.0234 \\
+COLLAB & $D_F$ / $D_{H_2}$ & 5 & 0.398 & 0.1058 & 0.0922 \\
+COLLAB & $D_C$ / $D_{H_2}$ & 6 & 0.426 & 0.0571 & 0.0288 \\
+PROTEINS & $D_F$ / $D_C$ & 16 & 0.764 & 0.0046 & 0.0084 \\
+PROTEINS & $D_F$ / $D_{H_2}$ & 14 & 0.570 & 0.1163 & 0.0506 \\
+PROTEINS & $D_C$ / $D_{H_2}$ & 13 & 0.568 & 0.1169 & 0.0690 \\
+\bottomrule
+\end{tabular}
+\caption{Hard-partition agreement and cross-distortion transfer at target collision occupancy $H_2(\bar q_G)=2.0$ nats. $n$ counts matched graphs. ARI is invariant to code-label permutation.}
+\label{tab:transductive-rate-matched-agreement}
+\end{table}
+
+Each cell in the full transfer table averages the accepted graph--target matches across all occupancy targets for that training/evaluation pair.
+Each column holds one evaluation fidelity fixed, each row supplies the partition trained using a particular fidelity, and the diagonal is zero by construction.
+Coverage can therefore differ between cells.
+Comparisons are made within columns because each column is expressed on its evaluation fidelity's scale.
+
+\begin{table}[htbp]
+\centering\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{llrrrr}
+\toprule
+Source & Training fidelity & Eval. $D_E$ & Eval. $D_F$ & Eval. $D_C$ & Eval. $D_{H_2}$ \\
+\midrule
+MalNet unweighted & $D_E$ & 0.0000 & -0.0017 & -0.0020 & 0.0732 \\
+MalNet unweighted & $D_F$ & 0.0163 & 0.0000 & -0.0024 & 0.0911 \\
+MalNet unweighted & $D_C$ & 0.0260 & 0.0058 & 0.0000 & 0.1057 \\
+MalNet unweighted & $D_{H_2}$ & 0.0999 & 0.0690 & 0.0738 & 0.0000 \\
+\midrule
+MalNet weighted & $D_E$ & 0.0000 & 0.0033 & -0.0023 & 0.0658 \\
+MalNet weighted & $D_F$ & 0.0131 & 0.0000 & 0.0011 & 0.0785 \\
+MalNet weighted & $D_C$ & 0.0149 & 0.0063 & 0.0000 & 0.0834 \\
+MalNet weighted & $D_{H_2}$ & 0.1010 & 0.0638 & 0.0864 & 0.0000 \\
+\midrule
+COLLAB & $D_E$ & 0.0000 & 0.0071 & 0.0509 & 0.2296 \\
+COLLAB & $D_F$ & 0.0044 & 0.0000 & 0.0293 & 0.1946 \\
+COLLAB & $D_C$ & 0.0381 & 0.0241 & 0.0000 & 0.0597 \\
+COLLAB & $D_{H_2}$ & 0.1016 & 0.0746 & 0.0101 & 0.0000 \\
+\midrule
+PROTEINS & $D_E$ & 0.0000 & -0.0009 & 0.0042 & 0.0758 \\
+PROTEINS & $D_F$ & 0.0036 & 0.0000 & 0.0048 & 0.0848 \\
+PROTEINS & $D_C$ & 0.0102 & 0.0027 & 0.0000 & 0.0807 \\
+PROTEINS & $D_{H_2}$ & 0.0594 & 0.0489 & 0.0577 & 0.0000 \\
+\bottomrule
+\end{tabular}
+\caption{Cross-distortion transfer, averaged over pairwise hard-$H_2$-matched graph--occupancy comparisons. Each entry is excess hard distortion relative to the solution trained for that column's evaluation fidelity. Compare rows within a column.}
+\label{tab:transductive-cross-distortion-transfer}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.82\linewidth]{transductive_relational_distortion_partition_examples.png}
+\caption{Example partitions at marginal-organization weight 0.50. Rows show a selected PROTEINS graph and a selected COLLAB graph; columns change only the source fidelity optimized by the transductive solver. Positions are fixed within a row, while partition labels and palettes are independently permuted for display. Annotations give each criterion's own hard distortion and hard effective count.}
+\label{fig:transductive-relational-distortion-partitions}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.76\linewidth]{relative_partition_ari_vs_h2.png}
+\caption{All six pairwise ARI comparisons in Study 2. The main text highlights three pairs; this figure retains the complete set. Points require at least five graphs meeting the pairwise hard-entropy matching rule.}
+\label{fig:transductive-full-rate-matched-ari}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.76\linewidth]{relative_partition_collision_jaccard_vs_h2.png}
+\caption{All six pairwise collision-Jaccard comparisons. Jaccard compares the induced same-code equivalence relations directly, complementing chance-corrected ARI. Points require at least five matched graphs.}
+\label{fig:transductive-full-rate-matched-jaccard}
+\end{figure}
+
+\section{Inductive Normalized-Cut Study Details}
+\label{app:malnet-ncut-details}
+
+MalNet-Tiny retains its official train/validation/test split before cleaning.
+Graphs are converted to simple undirected graphs, reduced to their largest connected component, and retained only if that component contains at least 512 nodes.
+\Cref{tab:malnet-preprocessing-summary} gives the resulting exclusions.
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{lrrr}
+\toprule
+Split & Raw graphs & Retained graphs & Excluded below 512 LCC nodes \\
+\midrule
+Train & 3500 & 1995 & 1505 \\
+Validation & 500 & 275 & 225 \\
+Test & 1000 & 584 & 416 \\
+\bottomrule
+\end{tabular}
+\caption{MalNet-Tiny source selection after cleaning.}
+\label{tab:malnet-preprocessing-summary}
+\end{table}
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{0.28\linewidth}X}
+\toprule
+Component & Setting \\
+\midrule
+Dataset & MalNet-Tiny, official source splits, labels unused \\
+Cleaning & Undirected edge union, self-loop removal, coalesced duplicates, largest connected component \\
+Minimum graph size & 512 vertices after LCC extraction \\
+Node features & Constant and cleaned undirected degree features, original directed degree features and PageRank, deterministic random-walk return estimates \\
+Random-walk estimates & 16 steps, 8 Rademacher probes, split/index-dependent deterministic seeds \\
+Assignments & $K=8$ categorical states; $\tau=1.0$ \\
+Encoder & Four GraphGPS-style layers, local GIN and global efficient attention, width 128, four heads \\
+Additional encoder settings & GELU, no dropout, FFN multiplier 2, graph-context concatenation, linear assignment head \\
+Organization weights $\lambda_{\mathrm{org}}$ & $0$, $0.03$, $0.10$, $0.20$, $0.50$ \\
+Objective & Minibatch objective $\mathcal L_B$ from \cref{eq:malnet-ncut-loss} \\
+Optimizer & AdamW, learning rate $5\times10^{-4}$, zero weight decay \\
+Schedule & 50-step warmup from factor 0.1, cosine decay to $10^{-5}$ \\
+Training & 250 epochs, batch size 80 \\
+Seeds & 1337, 2024, 31415, 27182, 16180 \\
+Checkpoint selection & Validation mean hard $\operatorname{Ncut}(G)$ under the fixed-$K$ convention of \cref{eq:hard-ncut} \\
+Spectral reference & Sparse normalized-Laplacian embedding, eight smallest eigenvectors, row normalization, deterministic $K$-means discretization \\
+Spectral eigensolver & SciPy \texttt{eigsh}, tolerance $10^{-5}$ \\
+Spectral $K$-means & Seed 1337, $n_{\mathrm{init}}=8$, maximum 100 iterations, tolerance $10^{-5}$ \\
+\bottomrule
+\end{tabularx}
+\caption{Settings for Study 3.}
+\label{tab:malnet-ncut-settings}
+\end{table}
+
+The spectral embedding is computed with SciPy's sparse \texttt{eigsh} solver~\citep{virtanen2020scipy}, and its seeded $K$-means discretization uses scikit-learn's \texttt{KMeans} implementation~\citep{pedregosa2011scikit}.
+Post-hoc $D_F$ is computed from the selected hard partitions using effective resistances of the cleaned source graph, as in \cref{eq:hard-partition-dirichlet-distortion}.
+The spectral reference is computed separately for each retained validation and test graph.
+
+\section{Reconstruction-Trained Flowers102 Study Details}
+\label{app:flowers102-details}
+
+All five image reconstruction settings use seed 1337, batch size 64, and 150 training epochs.
+AdamW uses learning rate $5\times10^{-4}$, zero weight decay, 100-step warmup from factor 0.1, and cosine decay to $10^{-6}$.
+Training applies random resized crops, horizontal flips, and mild color jitter; validation and test use resize followed by deterministic center crop.
+The checkpoint criterion is hard-code validation MSE.
+
+The nonstandard split uses the official Flowers102 test images for training, official validation images for validation, and official training images for final test evaluation.
+The resulting sizes are 6149, 1020, and 1020, respectively.
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{0.34\linewidth}X}
+\toprule
+Component & Setting \\
+\midrule
+Input & $256\times256$ RGB, unit-range pixel values \\
+Encoder width & 128 hidden channels \\
+Residual stack & Two blocks, 64 residual hidden channels \\
+Downsampling / upsampling & Three stride-2 analysis stages with GDN and three transposed-convolution synthesis stages, with IGDN after the first two synthesis stages, giving a $32\times32$ latent grid \\
+Spatial collision unit & One $b$-bit token per latent position \\
+Analysis output & $1\times1$ convolution producing $b$ logits per spatial position \\
+Decoder output & Sigmoid RGB reconstruction; no encoder--decoder skips \\
+Reconstruction loss & Mean squared error on $[0,1]$ pixels \\
+Training objective & $\mathcal L$ from \cref{eq:flowers-objective} \\
+Mean-group relaxation & Deterministic signs, separate positive and negative groups per channel, grouped over batch and spatial positions \\
+Concentration weight & $\lambda_{\mathrm{conc}}=10$ \\
+Threshold-scale EMA decay & 0.99 \\
+Threshold-scale floor & $10^{-3}$ \\
+Margin gain & $\gamma=3$ \\
+Collision pair samples & 8192 minibatch spatial-token pairs \\
+Augmentation & Random resized crop, horizontal flip, brightness/hue/saturation/contrast jitter of 0.05 \\
+\bottomrule
+\end{tabularx}
+\caption{Shared settings for Study 4.}
+\label{tab:flowers102-shared-settings}
+\end{table}
+Each collision pair is formed by two independent uniform draws, with replacement, from the minibatch's spatial tokens; self-pairs and same-image pairs are permitted.
+These pairs form the minibatch estimate in \cref{eq:flowers-separation} using the threshold collision of \cref{eq:flowers-threshold-collision}.
+
+The mean-group relaxation forms separate positive- and negative-sign groups within each channel over batch and spatial positions, subtracts each nonempty group's mean logit, and adds the resulting centered residual to the corresponding hard sign.
+For minibatch size $B$, let $\tilde h_r(x_s,u)$ denote the relaxed latent corresponding to hard sign $h_r(x_s,u)$.
+The concentration term is
+\begin{equation}
+\mathcal L_{\mathrm{conc}}
+=\frac{1}{B b H_z W_z}
+\sum_{s=1}^{B}\sum_{r=1}^{b}\sum_u
+\bigl(\tilde h_r(x_s,u)-h_r(x_s,u)\bigr)^2.
+\label{eq:concentration-reduction}
+\end{equation}
+Here $u$ ranges over the $H_zW_z$ latent spatial positions.
+Reported reconstruction metrics use hard signs fed directly to the decoder.
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{lrrrr}
+\toprule
+Setting & Bits & $\lambda_{\mathrm{org}}$ & Nominal bpp & Selected epoch \\
+\midrule
+No organization & 16 & $0$ & 0.25 & 117 \\
+Weaker organization & 16 & $10^{-7}$ & 0.25 & 145 \\
+Baseline & 16 & $10^{-6}$ & 0.25 & 148 \\
+Stronger organization & 16 & $10^{-5}$ & 0.25 & 148 \\
+Capacity ablation & 32 & $10^{-6}$ & 0.50 & 150 \\
+\bottomrule
+\end{tabular}
+\caption{Ablations and validation-selected checkpoint epochs.}
+\label{tab:flowers102-ablation-settings}
+\end{table}
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{lrrr}
+\toprule
+Setting & Test MSE & Test PSNR (dB) & Test MS-SSIM \\
+\midrule
+No organization & 0.01034 & 19.86 & 0.738 \\
+Weaker organization & 0.00367 & 24.36 & 0.882 \\
+Baseline & 0.00329 & 24.83 & 0.896 \\
+Stronger organization & 0.00350 & 24.56 & 0.892 \\
+Capacity ablation & 0.00258 & 25.88 & 0.920 \\
+\bottomrule
+\end{tabular}
+\caption{Additional hard-code reconstruction metrics for the same checkpoints as \cref{tab:flowers102-results}. Each setting is a single-seed run.}
+\label{tab:flowers102-reconstruction-metrics}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{flowers102_reconstruction_examples.png}
+\caption{Qualitative Flowers102 test reconstructions. Each triptych shows the original and hard-code reconstructions from the validation-selected 16-bit and 32-bit checkpoints. These examples use the hard sign representation evaluated quantitatively.}
+\label{fig:flowers102-reconstruction-examples}
+\end{figure}
+
+\section{Teacher-Defined Flowers102 Study Details}
+\label{app:flowers102-teacher-details}
+
+The teacher-defined study uses the same source split, image size, and evaluation preprocessing as Study 4, with a single seed of 1337.
+Representation learning uses only the baseline-relative teacher relation through favored and disfavored pair requirements.
+The secondary synthesis stage begins after the representation checkpoint is selected and keeps the encoder frozen.
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{0.29\linewidth}X}
+\toprule
+Component & Setting \\
+\midrule
+Dataset split & 6149 train / 1020 validation / 1020 test, as in Study 4 \\
+Input & $256\times256$ RGB \\
+Teacher & Frozen DINO ViT-S/8, final spatial patch tokens, normalized before cosine evaluation \\
+Teacher source & Official \texttt{facebookresearch/dino} \\
+Teacher checkpoint & \texttt{dino\_deitsmall8\_pretrain.pth}, official release \\
+Teacher grid & $32\times32$ patch-token embeddings \\
+Student & The convolutional analysis transform used in Study 4 \\
+Hard code & Sixteen zero-threshold sign bits per spatial token \\
+Training token sample & 1024 spatial tokens sampled uniformly without replacement per minibatch \\
+Evaluation token sample & 1024 spatial tokens sampled uniformly without replacement with fixed validation/test seeds \\
+Candidate mask & Cross-image pairs among sampled tokens \\
+Temperatures & Code $\tau_c=0.25$; teacher $\tau_T=0.1$ \\
+Alignment weight & 1 \\
+Representation objective & $\mathcal L_{\mathrm{teacher}}$ from \cref{eq:dino-teacher-loss} \\
+Representation optimizer & AdamW, learning rate $5\times10^{-4}$, zero weight decay \\
+Representation schedule & 100-step warmup from factor 0.1, cosine decay to $10^{-6}$ \\
+Representation training & 150 epochs, batch size 32, seed 1337 \\
+Representation selection & Validation teacher loss; selected epoch 146 \\
+Decoder stage & Frozen encoder, hard signs only, MSE loss \\
+Decoder architecture & The synthesis-transform form used in Study 4 \\
+Decoder optimizer & AdamW, learning rate $5\times10^{-4}$, zero weight decay \\
+Decoder schedule & 100-step warmup from factor 0.1, cosine decay to $10^{-6}$ \\
+Decoder training/selection & 150 epochs, batch size 32; validation MSE selects epoch 140 \\
+\bottomrule
+\end{tabularx}
+\caption{Settings for Study 5.}
+\label{tab:flowers102-teacher-settings}
+\end{table}
+
+The DINO implementation uses commit \texttt{7c446df5b9f45747937fb0d72314eb9f7b66930a} of the official \texttt{facebookresearch/dino} repository.
+The teacher receives the same augmented crop as the student after applying teacher-specific normalization.
+The teacher relation and its favored and disfavored weights are defined in \cref{eq:teacher-row-relation,eq:teacher-signed-weights}.
+
+For numerical stability, per-bit agreement probabilities are floored at the floating-point dtype's smallest positive normal value before their logarithms are summed, and the resulting whole-code probability is clipped to $[\varepsilon,1-\varepsilon]$, where $\varepsilon$ is machine epsilon, before evaluating the logit in \cref{eq:teacher-centered-margin}.
+For the centered margin to retain a numerically representable region below the neutral collision level, the clipping floor must satisfy $\varepsilon<2^{-b}$; the reported 16-bit loss is evaluated in float32, for which this condition holds.
+The clipped loss can differ from the ideal mathematical expression in saturated regions and can have zero gradients through the clipping operation there.
+These operations affect only the smooth training loss; reported hard-collision metrics use hard code equality.
+
+The reported favored-pair enrichment and disfavored-pair suppression use pooled empirical token collision as their baseline.
+Reported teacher-collision, teacher-cosine, and reconstruction metrics use the conventions in \ref{app:metric-definitions}.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[height=0.84\textheight,keepaspectratio]{flowers102_teacher_decoder_reconstructions.png}
+\caption{Qualitative Flowers102 test examples from the secondary decoder trained on frozen teacher-guided hard codes. Each pair shows an original image and its reconstruction. Pixel reconstruction did not participate in learning the encoder.}
+\label{fig:flowers102-teacher-reconstruction-examples}
+\end{figure}

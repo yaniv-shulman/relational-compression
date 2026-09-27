@@ -1,0 +1,511 @@
+\section{Selected Realizations of Relational Fidelity}
+\label{sec:relational-distortion-realizations}
+
+Relational requirements may be supplied directly by a source relation or emerge from reconstruction.
+This section instantiates both routes within the finite-codeword geometry, covering signed and baseline-relative pair requirements, graph-operator probes, and exact correspondences to centroid reconstruction and normalized cut.
+These examples are representative rather than exhaustive; path, walk, and additional spectral constructions are retained in \ref{app:path-walk-content}.
+
+\subsection{Selected constructions for relational requirements}
+
+When pairwise weights are derived from a single real-valued relation, two useful cases are an intrinsically signed relation and a relation interpreted relative to a source-side baseline.
+
+This role assignment is specific to the collision realization: for example, the block-valued decoder of \cref{sec:block-summary-walkthrough} can reproduce strong relations between different groups through its reproduction table $\Xi$, without interpreting group inequality itself as a separation requirement.
+
+\paragraph{Intrinsically signed relations}
+For an intrinsically signed $S$, the nonnegative source weights can be $S_+=[S]_+$ and $S_-=[-S]_+$.
+
+\paragraph{Baseline-relative relations}
+Alternatively, compare a real-valued relation with a source-side neutral baseline:
+\begin{equation}
+S_+=[S-S_{\mathrm{bg}}]_+,\qquad
+S_-=[S_{\mathrm{bg}}-S]_+.
+\label{eq:signed-relation}
+\end{equation}
+Relations above the baseline induce alignment and those below it induce separation, including when all original source values are nonnegative.
+When a probability-law form is desired, nonzero pair weights can be normalized over the evaluated carrier pairs to obtain $P_+$ and $P_-$; weighted-sum objectives may instead use them directly.
+
+The source-side baseline $S_{\mathrm{bg}}$ identifies unusually strong or weak source relationships, while $r(z)$ specifies a reference for codeword occupancy.
+A representation-side collision reference can separately center a learning margin.
+These are respectively a source-side relational baseline, a codeword-occupancy reference, and a representation-side collision threshold.
+
+\subsection{Direct relation preservation and signed distinctions}
+\label{sec:edge-cut-distortion}
+
+The simplest graph realization treats retained edge weight itself as relational content and then uses collision to decide which source edges survive.
+
+Let $G=(V,E,W)$ be an undirected graph with symmetric nonnegative weights, zero diagonal, and one copy of each undirected edge in $E$, and let $\widetilde G$ denote a reconstructed weighted graph on the same carrier with weight matrix $\widetilde W$.
+A reconstruction obtained by deletion or attenuation satisfies $0\le\widetilde W\le W$ entrywise.
+The direct edge content and its distortion are
+\begin{equation}
+\mathcal I_{\mathrm{edge}}(G)=\frac12\sum_{i,j}W_{ij},\qquad
+D_{\mathrm{edge}}(G,\widetilde G)=\frac12\sum_{i,j}(W_{ij}-\widetilde W_{ij}).
+\label{eq:edge-distortion}
+\end{equation}
+When $\mathcal I_{\mathrm{edge}}(G)>0$, the normalized direct-edge distortion is
+\begin{equation}
+D_E(G,\widetilde G)
+:=\frac{D_{\mathrm{edge}}(G,\widetilde G)}{\mathcal I_{\mathrm{edge}}(G)}.
+\label{eq:normalized-edge-distortion}
+\end{equation}
+The factor $1/2$ counts each undirected edge once.
+This is a monotone content-based fidelity in the sense of \cref{eq:relational-content-distortion}.
+
+A hard partition can retain only within-codeword edges,
+\begin{equation}
+\widetilde W_{ij}=W_{ij}\ind[c(i)=c(j)],
+\label{eq:partition-retained-relation}
+\end{equation}
+so its distortion is the cut weight $\sum_{\{i,j\}\in E}W_{ij}\ind[c(i)\ne c(j)]$.
+For probabilistic assignments, define $q_i:=q_\theta(\cdot\mid x_i)$ and $k_{\theta,ij}:=k_\theta(x_i,x_j)=q_i^\top q_j$.
+Collision attenuation then gives
+\begin{equation}
+\widetilde W_{\theta,ij}=W_{ij}k_{\theta,ij},\qquad
+D_{\mathrm{edge}}(\theta)=\frac12\sum_{i,j}W_{ij}(1-k_{\theta,ij}).
+\label{eq:soft-cut-distortion}
+\end{equation}
+Its normalized form is
+\[
+D_E(\theta)
+=\frac{
+\sum_{\{i,j\}\in E}W_{ij}(1-k_{\theta,ij})
+}{
+\sum_{\{i,j\}\in E}W_{ij}
+}.
+\]
+When used as a learning objective, minimizing this distortion is equivalent to maximizing collision on positively weighted source edges.
+For independent sampled assignments, the soft expression also equals the expected hard cut weight on distinct vertices because this distortion is linear in the retained edge indicators; this equivalence does not generally extend to nonlinear graph fidelities.
+
+The decoder convention matters here.
+A reconstruction of the retained weighted graph includes its weights as stored or shared information.
+An equality-only description can instead be evaluated by its cut distortion against the source graph.
+These distinct descriptions can lead to the same scalar distortion.
+
+Positive edge preservation alone allows complete collapse.
+For nonnegative source weights $W_+$ and $W_-$ describing favored and disfavored collisions, a signed relational objective is
+\begin{equation}
+\mathcal L_{\mathrm{signed}}(\theta)
+=\frac12\sum_{i,j}\left[W_{+,ij}(1-k_{\theta,ij})
++\lambda_{\mathrm{rel}}W_{-,ij}k_{\theta,ij}\right].
+\label{eq:signed-relational-objective}
+\end{equation}
+The weights may be supplied directly or derived from $W-W_{\mathrm{bg}}$ as in \cref{eq:signed-relation}.
+Although collision attenuation still gives $0\le\widetilde W\le W$ for a nonnegative source graph, the signed objective is not a monotone retained-content distortion: decreasing collision worsens fidelity on favored pairs but improves it on disfavored pairs.
+With a hard equality decoder, it defines a relational fidelity criterion on the partition relation, closely related to the positive/negative disagreement perspective of correlation clustering~\citep{bansal2004correlation}.
+
+\subsection{Graph probes and operator fidelity}
+\label{sec:graph-fourier-distortion}
+
+Direct edge fidelity asks which relations remain; operator fidelity instead asks which behaviors supported by those relations remain.
+
+For the same undirected graph, let $d_i=\sum_jW_{ij}$ and $L=\operatorname{Diag}(d)-W$.
+Its Dirichlet energy is
+\begin{equation}
+f^\top Lf=\frac12\sum_{i,j}W_{ij}(f_i-f_j)^2.
+\label{eq:dirichlet-energy-vertex}
+\end{equation}
+With $L=U\Lambda U^\top$ and graph-Fourier coefficients $\widehat f=U^\top f$, the same scalar is
+\begin{equation}
+f^\top Lf=\sum_r\lambda_r|\widehat f_r|^2.
+\label{eq:dirichlet-energy-fourier}
+\end{equation}
+This is the standard graph-signal/Fourier interpretation~\citep{shuman2013emerging}.
+The relation determines which signal variations carry energy.
+
+Deleting or attenuating edges gives $0\preceq\widetilde L\preceq L$, since $L-\widetilde L$ is the Laplacian of the removed weights.
+A fixed probe therefore loses
+\begin{equation}
+D_f(G,\widetilde G)
+=f^\top(L-\widetilde L)f
+=\frac12\sum_{i,j}(W_{ij}-\widetilde W_{ij})(f_i-f_j)^2.
+\label{eq:dirichlet-distortion-vertex}
+\end{equation}
+If $\widetilde L=\widetilde U\widetilde\Lambda\widetilde U^\top$, this is equally
+\begin{equation}
+D_f(G,\widetilde G)
+=\sum_r\lambda_r|(U^\top f)_r|^2
+-\sum_r\widetilde\lambda_r|(\widetilde U^\top f)_r|^2.
+\label{eq:dirichlet-distortion-fourier}
+\end{equation}
+The vertex and Fourier expressions evaluate the same fidelity in two coordinate systems, using each operator's own eigenbasis.
+
+Rather than selecting a single probe signal, we can specify a distribution over signals whose behavior we wish to preserve.
+Let $F$ be such a random probe with second moment $M=\E[FF^\top]$.
+Specializing \cref{eq:operator-expected-distortion} to the graph Laplacian gives
+\[
+D_M(G,\widetilde G)=\operatorname{tr}[(L-\widetilde L)M].
+\]
+For an edge $e=\{i,j\}$, let $b_e=e_i-e_j$ be an oriented incidence vector, with either orientation.
+The Laplacian decomposes into individual edge contributions:
+\[
+L
+=
+\sum_{e=\{i,j\}\in E}W_{ij}b_eb_e^\top.
+\]
+The orientation is arbitrary because replacing $b_e$ by $-b_e$ leaves $b_eb_e^\top$ unchanged.
+Using the rank-one trace identity $\operatorname{tr}(uv^\top A)=v^\top Au$ gives
+\begin{align*}
+\operatorname{tr}(LM)
+&=
+\sum_{e=\{i,j\}\in E}
+W_{ij}\operatorname{tr}(b_eb_e^\top M)\\
+&=
+\sum_{e=\{i,j\}\in E}
+W_{ij}b_e^\top M b_e.
+\end{align*}
+Because $M=\E[FF^\top]$,
+\[
+b_e^\top M b_e
+=
+\E[(F_i-F_j)^2].
+\]
+Define the source importance of edge $e$ by $s_e=W_{ij}b_e^\top M b_e\ge0$.
+It is the contribution of that edge to the expected source Dirichlet energy under the chosen probe family.
+Since $\sum_e s_e=\operatorname{tr}(LM)$, collision attenuation gives the normalized distortion
+\begin{equation}
+\overline D_M(\theta)
+=\sum_{e=\{i,j\}\in E}\rho_e(1-k_{\theta,ij}),\qquad
+\rho_e=\frac{s_e}{\sum_{e'\in E}s_{e'}},
+\label{eq:probe-edge-family}
+\end{equation}
+provided the total expected source energy $\operatorname{tr}(LM)$ is positive.
+Thus $M$ determines which source signal variations, and therefore which edges, matter most to the fidelity criterion, while the finite-code representation itself remains unchanged.
+
+\paragraph{Isotropic and all-mode probes}
+For $M=I$, $D_I=\operatorname{tr}(L-\widetilde L)=2D_{\mathrm{edge}}$.
+Since $\operatorname{tr}(L)=2\mathcal I_{\mathrm{edge}}(G)$, the normalized isotropic-probe criterion is $D_I/\operatorname{tr}(L)=D_E$.
+For a source graph with $n$ vertices and $\kappa_G$ connected components, suppose $\operatorname{rank}(L)=n-\kappa_G>0$.
+A source-normalized alternative then uses $M=L^+/(n-\kappa_G)$, where $L^+$ is the Moore--Penrose pseudoinverse.
+We denote this source-normalized all-mode criterion by $D_F$.
+The spectral expansion
+\[
+L^+
+=
+\sum_{\lambda_r>0}\frac1{\lambda_r}u_ru_r^\top
+\]
+gives
+\begin{align}
+D_F(G,\widetilde G)
+&=\frac{\operatorname{tr}[(L-\widetilde L)L^+]}{n-\kappa_G}\\
+&=\frac1{n-\kappa_G}
+\sum_{\lambda_r>0}
+\frac{u_r^\top(L-\widetilde L)u_r}{\lambda_r}.
+\label{eq:source-normalized-dirichlet-distortion}
+\end{align}
+The factor $1/\lambda_r$ normalizes each positive-eigenvalue source Laplacian mode by its source Dirichlet energy, while division by $n-\kappa_G$ averages over those modes.
+Zero modes are excluded because they have zero source Dirichlet energy; for a disconnected graph, they include signals that are constant separately on each connected component.
+For an individual positive-eigenvalue source mode $u_r$, its source Dirichlet energy is $u_r^\top Lu_r=\lambda_r$.
+Evaluating the same fixed source signal on the reconstructed graph gives the Dirichlet energy $u_r^\top\widetilde Lu_r$, so
+\[
+\frac{u_r^\top(L-\widetilde L)u_r}{\lambda_r}
+=1-\frac{u_r^\top\widetilde Lu_r}{\lambda_r}
+\]
+is the fraction of that mode's source Dirichlet energy removed by compression, and $D_F$ is the mean of these relative losses.
+The quantity $u_r^\top\widetilde Lu_r$ is not generally an eigenvalue of $\widetilde L$, because a source eigenvector need not remain an eigenvector after compression.
+Within a repeated positive-eigenvalue source eigenspace, the individual mode losses depend on the chosen orthonormal eigenbasis, but their sum over the entire eigenspace and hence its contribution to $D_F$ is basis invariant.
+Because $\operatorname{tr}(LL^+)=\operatorname{rank}(L)=n-\kappa_G$, the normalization $M=L^+/(n-\kappa_G)$ ensures $\operatorname{tr}(LM)=1$, so the probe distribution has unit expected Dirichlet energy on the source graph.
+
+The spectral form describes distortion mode by mode.
+To obtain the complementary edgewise interpretation, decompose the removed Laplacian into its deleted or attenuated edge contributions:
+\[
+L-\widetilde L
+=
+\sum_{e=\{i,j\}\in E}(W_{ij}-\widetilde W_{ij})b_e b_e^\top.
+\]
+Substituting this decomposition into the trace form gives
+\begin{equation}
+D_F(G,\widetilde G)
+=\frac1{n-\kappa_G}\sum_{e=\{i,j\}\in E}(W_{ij}-\widetilde W_{ij})R_{\mathrm{eff}}^G(i,j),
+\qquad R_{\mathrm{eff}}^G(i,j)=b_e^\top L^+b_e,\quad e=\{i,j\}.
+\label{eq:resistance-weighted-dirichlet-distortion}
+\end{equation}
+All resistances are computed in the original source graph.
+For a hard partition,
+\begin{equation}
+D_F(G,c)=\frac1{n-\kappa_G}
+\sum_{\substack{\{i,j\}\in E\\c(i)\ne c(j)}}
+W_{ij}R_{\mathrm{eff}}^G(i,j).
+\label{eq:hard-partition-dirichlet-distortion}
+\end{equation}
+Its numerator is the established resistance-weighted cut-size~\citep{cesabianchi2013random,gentile2013online}.
+Here it is used as the all-mode source-normalized probe realization of relational fidelity.
+Since
+\[
+\sum_{\{i,j\}\in E}W_{ij}R_{\mathrm{eff}}^G(i,j)
+=
+\operatorname{tr}(LL^+)
+=
+n-\kappa_G,
+\]
+the denominator is the total source resistance-weighted edge mass, giving $0\le D_F\le1$ under attenuation.
+
+\paragraph{Source collision probes}
+Beyond isotropic and all-mode choices, a source-derived probe family can emphasize distinctions already present in the graph's local transition structure.
+Viewing each vertex's normalized edge weights as a distribution over destinations, two vertices have greater probability-product overlap when independent draws from their destination distributions tend to coincide.
+For positive degrees, let $P_{ij}=W_{ij}/d_i$ be the source transition matrix.
+Its rows are distributions over relational destinations, and
+\begin{equation}
+\Gamma_{\mathrm{src}}=PP^\top,\qquad
+(\Gamma_{\mathrm{src}})_{ij}=\sum_rP_{ir}P_{jr}
+\end{equation}
+is the probability that independent destination draws from rows $i$ and $j$ coincide.
+It is positive semidefinite and can be used as a source-frozen probe second moment.
+For $\operatorname{tr}(L\Gamma_{\mathrm{src}})>0$,
+\begin{equation}
+D_C(G,\widetilde G)
+=\frac{\operatorname{tr}[(L-\widetilde L)\Gamma_{\mathrm{src}}]}
+{\operatorname{tr}(L\Gamma_{\mathrm{src}})}.
+\label{eq:source-collision-covariance-distortion}
+\end{equation}
+For $e=\{i,j\}$, $b_e^\top PP^\top b_e=\|P_i-P_j\|_2^2$, so collision attenuation gives
+\begin{equation}
+D_C(\theta)=
+\frac{\sum_{\{i,j\}\in E}W_{ij}\|P_i-P_j\|_2^2(1-k_{\theta,ij})}
+{\sum_{\{i,j\}\in E}W_{ij}\|P_i-P_j\|_2^2}.
+\label{eq:source-collision-edge-distortion}
+\end{equation}
+This fidelity emphasizes differences in source transition profiles across edges.
+Here $\Gamma_{\mathrm{src}}=PP^\top$ is a source-derived probe second moment, encoding collision probabilities between transition distributions, whereas $k_{\theta,ij}=q_i^\top q_j$ is a representation-side collision probability that controls edge attenuation.
+The two have the same probability-product form but act on different distributions and play different roles.
+
+The full transition-profile construction compares the destination distributions themselves.
+A complementary source-derived probe can instead summarize each vertex's local transition structure by a scalar measure of its effective relational diversity, and preserve how that quantity varies across the graph.
+Specifically, a rank-one source probe uses local transition collision entropy,
+\begin{equation}
+h_i^{(2)}=-\log\sum_jP_{ij}^2.
+\end{equation}
+The source field $h_G^{(2)}$ is held fixed while the graph is compressed.
+When its source Dirichlet energy is positive, define
+\begin{equation}
+D_{H_2}(G,\widetilde G)
+=\frac{(h_G^{(2)})^\top(L-\widetilde L)h_G^{(2)}}
+{(h_G^{(2)})^\top Lh_G^{(2)}}.
+\label{eq:entropy-probe-distortion}
+\end{equation}
+Here $D_{H_2}$ measures distortion of the source transition-entropy field $h_G^{(2)}$ under graph compression.
+Under collision attenuation this has edge weights proportional to $W_{ij}(h_i^{(2)}-h_j^{(2)})^2$.
+It measures the lost gradient energy of the selected source-intrinsic field.
+If the field is constant on connected components, the denominator is zero and this normalized fidelity is undefined.
+
+For an unweighted simple graph, each transition row is uniform over $d_i$ neighbors, so $h_i^{(2)}=\log d_i$; its Shannon row entropy is identical.
+Thus on such graphs the transition-entropy field reduces to the log-degree field, while weighted or otherwise nonuniform relations allow Shannon and R\'enyi-2 transition entropies to distinguish different local structure.
+
+\paragraph{Worst-case fidelity}
+The relative worst-case graph distortion is
+\begin{equation}
+D_{\mathrm{wc}}(G,\widetilde G)
+=\sup_{f:f^\top Lf>0}
+\frac{f^\top(L-\widetilde L)f}{f^\top Lf}.
+\label{eq:graph-worst-case-spectral-distortion}
+\end{equation}
+If a connected source becomes disconnected, a signal constant on each new component but nonconstant on the original graph has zero reconstructed energy and positive source energy.
+Hence $D_{\mathrm{wc}}=1$.
+In particular, every nontrivial hard partition of a connected source that removes all cross-class edges has maximal distortion under this criterion.
+That makes worst-case fidelity a useful boundary of the representation, but an uninformative ranking among such hard partition reconstructions.
+
+\subsection{Centroid reconstruction as an exact objective correspondence}
+\label{sec:vq}
+
+Classical squared-error centroid reconstruction admits an exact pairwise relational formulation.
+Consider $N$ observations $x_1,\ldots,x_N\in\R^d$, and define the source relation
+\[
+S(i,j)=\|x_i-x_j\|_2^2.
+\]
+For the probabilistic finite encoder of \cref{eq:discrete-encoder}, write
+\[
+q_{iz}:=q_\theta(z\mid x_i),
+\qquad
+q_{iz}\ge0,
+\qquad
+\sum_zq_{iz}=1,
+\]
+for the soft assignment weight of observation $x_i$ to codeword $z$.
+Define the empirical aggregate codeword distribution by
+\[
+\hat q_Z(z)
+:=
+\frac1N\sum_{i=1}^Nq_{iz}.
+\]
+This is the finite-sample analogue of the population aggregate codeword distribution $q_Z$ in \cref{eq:aggregate-code}.
+A codeword is active when $\hat q_Z(z)>0$.
+For each active codeword, the assignment-weighted centroid is
+\begin{equation}
+\bar x_z
+=
+\frac{1}{N\hat q_Z(z)}
+\sum_{i=1}^Nq_{iz}x_i,
+\qquad
+\hat q_Z(z)>0.
+\label{eq:finite-soft-centroid}
+\end{equation}
+Define the average centroid reconstruction error by
+\[
+D_{\mathrm{cent}}
+:=
+\frac1N
+\sum_{z:\hat q_Z(z)>0}
+\sum_iq_{iz}\|x_i-\bar x_z\|_2^2.
+\]
+The decoder associates one reproduction vector $\widehat x_z\in\R^d$ with each codeword $z\in\mathcal Z$.
+For arbitrary choices of these reproduction vectors, define the average reconstruction error by
+\[
+D_{\mathrm{dec}}
+:=
+\frac1N
+\sum_{i,z}q_{iz}\|x_i-\widehat x_z\|_2^2.
+\]
+The key correspondence is that centroid reconstruction error can be written exactly as an inverse-marginally weighted pairwise squared-distance distortion under the same assignments.
+More generally, reconstruction with arbitrary codeword reproductions decomposes into this centroid error plus the excess incurred when the reproduction vectors differ from their assignment-weighted centroids.
+The following proposition collects the established weighted variance identities that yield these correspondences~\citep{gray1998quantization,dhillon2004kernel}.
+
+\begin{proposition}[Centroid and pairwise forms]
+\label{prop:centroid-pairwise}
+For the assignments and reconstruction errors above,
+\begin{equation}
+D_{\mathrm{cent}}
+=\frac1{2N^2}
+\sum_{z:\hat q_Z(z)>0}\frac1{\hat q_Z(z)}
+\sum_{i,j}q_{iz}q_{jz}\|x_i-x_j\|_2^2.
+\label{eq:finite-soft-pairwise}
+\end{equation}
+The affinity $a_{\hat q_Z}$ is the empirical finite-sample specialization of the inverse-mass affinity in \cref{eq:qz-affinity}, so equivalently
+\begin{equation}
+D_{\mathrm{cent}}=\frac1{2N^2}\sum_{i,j}
+\|x_i-x_j\|_2^2a_{\hat q_Z}(x_i,x_j).
+\label{eq:finite-soft-qz-normalized}
+\end{equation}
+The arbitrary-reproduction error decomposes as
+\begin{equation}
+D_{\mathrm{dec}}
+=D_{\mathrm{cent}}
++\sum_{z:\hat q_Z(z)>0}
+\hat q_Z(z)\|\bar x_z-\widehat x_z\|_2^2.
+\label{eq:decoder-centroid-decomposition}
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+For each active codeword,
+\begin{equation}
+\sum_iq_{iz}\|x_i-\bar x_z\|^2
+=\sum_iq_{iz}\|x_i\|^2
+-N\hat q_Z(z)\|\bar x_z\|^2.
+\end{equation}
+Expanding the weighted double sum of $\|x_i-x_j\|^2$ yields twice $N\hat q_Z(z)$ times the same within-codeword variance expression.
+Summing over codewords proves the first identity, and division by the empirical aggregate mass gives the inverse-marginal affinity form.
+For the decoder identity, expand $x_i-\widehat x_z=(x_i-\bar x_z)+(\bar x_z-\widehat x_z)$; the weighted cross term vanishes, and $\sum_iq_{iz}=N\hat q_Z(z)$ gives the stated excess-error term.
+\end{proof}
+
+For a hard assignment $c$, let $V_z:=\{i:c(i)=z\}$.
+For each nonempty class, the familiar special case is
+\begin{equation}
+\sum_{i\in V_z}\|x_i-\bar x_z\|^2
+=\frac1{2|V_z|}\sum_{i,j\in V_z}\|x_i-x_j\|^2,
+\label{eq:vq-pairwise}
+\end{equation}
+The variance identity therefore determines the inverse empirical-marginal factor.
+Where the assignments are differentiable in the encoder parameters and active aggregate masses remain positive, the two forms also have identical encoder gradients.
+
+The population form requires a finite second moment.
+Let $X\sim\mu$ with $\E\|X\|^2<\infty$, let $Z\mid X\sim q_\theta(\cdot\mid X)$, and define $\bar x_z=\E[X\mid Z=z]$ for active words.
+Then
+\begin{equation}
+\E\|X-\bar x_Z\|^2
+=\frac12\E_{X,X'\overset{\mathrm{iid}}{\sim}\mu}
+\left[\|X-X'\|^2a_{q_Z}(X,X')\right].
+\label{eq:stochastic-vq-pairwise}
+\end{equation}
+To see this, condition on each active $z$, apply the two-independent-copies variance identity, and average with weight $q_Z(z)$.
+The conditional law has density $q_\theta(z\mid x)/q_Z(z)$ with respect to $\mu$, producing exactly the inverse-mass factor.
+
+This correspondence concerns a scalar fidelity and its optimal per-codeword reproduction.
+Pointwise reconstruction uses the reproduction vectors, while within-code relational distortion can use the partition or affinity as its reconstructed statistic.
+The identity relies on this per-codeword decoder structure; a decoder that jointly interprets multiple latent variables need not admit the same decomposition.
+
+\subsection{Normalized association and normalized cut}
+\label{sec:normalized-cut-realization}
+
+Normalized cut is a classical graph-partitioning objective that penalizes edges crossing between groups relative to the total edge volume of those groups~\citep{shi2000normalized}.
+Equivalently, normalized association rewards edge weight retained within each group after normalization by group volume.
+We show here that the endogenous inverse-mass affinity of the finite-codeword construction recovers these objectives under graph-local degree weighting.
+
+For an undirected nonnegative graph with positive total volume, let $d_i=\sum_jW_{ij}$, $\operatorname{vol}(G)=\sum_i d_i$, and $\pi_i=d_i/\operatorname{vol}(G)$.
+This defines a degree-weighted distribution over the vertices.
+For assignments $q_i(z)$, the aggregate codeword distribution under this degree weighting is
+\begin{equation}
+\bar q_G(z)=\sum_i\pi_iq_i(z)
+=\frac{\sum_i d_iq_i(z)}{\operatorname{vol}(G)}.
+\label{eq:graph-aggregate-code}
+\end{equation}
+Zero-degree vertices receive zero weight under this distribution.
+Write $\mathcal Z_G^+=\{z:\bar q_G(z)>0\}$.
+The endogenous inverse-mass affinity $a_{q_Z}$ of \cref{eq:qz-affinity}, built from the aggregate codeword distribution $q_Z(z)$ in \cref{eq:aggregate-code}, specializes here by replacing $q_Z(z)$ with the graph-local aggregate $\bar q_G(z)$ induced by the degree-weighted vertex distribution $\pi$.
+\begin{equation}
+a_{\bar q_G}(i,j)
+:=\sum_{z\in\mathcal Z_G^+}\frac{q_i(z)q_j(z)}{\bar q_G(z)}.
+\end{equation}
+
+Let $\vec E$ contain both directions of every undirected edge.
+The graph-local inverse-mass affinity gives
+\begin{align}
+\operatorname{NAssoc}_{\mathrm{soft}}(G)
+&=\frac1{\operatorname{vol}(G)}\sum_{(i,j)\in\vec E}W_{ij}a_{\bar q_G}(i,j)\\
+&=\sum_{z\in\mathcal Z_G^+}
+\frac{\sum_{(i,j)\in\vec E}W_{ij}q_i(z)q_j(z)}{\sum_i d_iq_i(z)}.
+\label{eq:soft-nassoc-affinity}
+\end{align}
+The second expression follows by substituting \cref{eq:graph-aggregate-code}, showing that the graph-local inverse-mass affinity recovers a familiar soft normalized-association surrogate.
+To obtain the corresponding fixed-$K$ normalized-cut criterion, we must also specify how empty classes are treated.
+We define
+\begin{align}
+\operatorname{Ncut}_{K,\mathrm{soft}}(G)
+&=K-\operatorname{NAssoc}_{\mathrm{soft}}(G)\\
+&=K-|\mathcal Z_G^+|
++\sum_{z\in\mathcal Z_G^+}
+\frac{\sum_{(i,j)\in\vec E}W_{ij}q_i(z)(1-q_j(z))}
+{\sum_i d_iq_i(z)}.
+\label{eq:soft-ncut-relational-distortion}
+\end{align}
+The correction $K-|\mathcal Z_G^+|$ is zero when every soft class is active.
+For strictly positive soft assignments every class is active; the correction extends the criterion to hard or limiting assignments with empty classes.
+
+\begin{proposition}[Hard normalized-cut specialization]
+\label{prop:normalized-cut}
+For a hard assignment $c$ with $K$ positive-volume classes $V_z:=\{i:c(i)=z\}$, \cref{eq:soft-nassoc-affinity} becomes
+\begin{equation}
+\operatorname{NAssoc}(G)=\sum_{z=1}^K
+\frac{\operatorname{assoc}(V_z,V_z)}{\operatorname{vol}(V_z)},
+\qquad
+\operatorname{Ncut}(G)=K-\operatorname{NAssoc}(G).
+\label{eq:hard-ncut}
+\end{equation}
+These are classical normalized association and normalized cut.
+Under the fixed-$K$ extension, an empty class contributes zero association and a unit penalty to normalized cut.
+\end{proposition}
+
+\begin{proof}
+One-hot membership makes the numerator for class $z$ its directed internal edge weight and the denominator its volume.
+The identity $\operatorname{cut}(V_z,V\setminus V_z)=\operatorname{vol}(V_z)-\operatorname{assoc}(V_z,V_z)$ gives the cut form.
+The empty-class extension follows from the definition $K-\operatorname{NAssoc}$.
+\end{proof}
+
+The hard objective and its clustering correspondences are established~\citep{shi2000normalized,dhillon2004kernel}.
+The soft surrogate is also used by neural partitioners such as GAP and the method of Gatti et al.~\citep{nazi2019gap,gatti2022deep}.
+Here these established objectives are positioned within the common description of source fidelity and codeword affinity.
+
+The soft ratio uses a deterministic soft mass in its denominator, whereas the volume of a randomly sampled hard class is itself random; it therefore differs from the expectation of hard normalized cut under sampled assignments.
+The distinction between ratios of expectations and expected ratios motivates complementary probabilistic-cut formulations~\citep{ghriss2026beyond}.
+
+\subsection{Common structure of the exact correspondences}
+
+The centroid and normalized-association correspondences expose a common representation-side structure.
+\begin{equation}
+\begin{aligned}
+D_{\mathrm{cent}}
+&=\frac1{2N^2}\sum_{i,j}\|x_i-x_j\|^2a_{\hat q_Z}(x_i,x_j),\\
+\operatorname{NAssoc}_{\mathrm{soft}}
+&=\frac1{\operatorname{vol}(G)}\sum_{(i,j)\in\vec E}W_{ij}a_{\bar q_G}(i,j).
+\end{aligned}
+\label{eq:vq-ncut-relational-correspondence}
+\end{equation}
+Both use an endogenous inverse-aggregate-mass affinity, while the source-side weighting determines what agreement means: squared Euclidean distance penalizes grouping distant observations, whereas graph edge weight rewards grouping strongly linked vertices.
+Thus the same inverse-aggregate-mass affinity construction can realize distinct relational fidelities without identifying their source geometries.
