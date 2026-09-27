@@ -38,6 +38,7 @@ from relational_compression.experiments.inductive_normalized_cut.metrics import 
 )
 from relational_compression.experiments.inductive_normalized_cut.models import make_model
 from relational_compression.paths import get_experiment_dir, get_experiment_name
+from relational_compression.randomness import capture_rng_state, restore_rng_state
 
 _CONFIG_FIELD_NAMES = (
     "task_model_name",
@@ -586,6 +587,9 @@ def run_single_malnet_tiny_experiment(
         model.load_state_dict(checkpoint["model_state_dict"])
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+        if "rng_state" not in checkpoint:
+            raise ValueError(f"Checkpoint does not contain RNG state and cannot be resumed exactly: {latest_path}")
+        restore_rng_state(state=checkpoint["rng_state"])
         global_step = int(checkpoint["global_step"])
         start_epoch = int(checkpoint["completed_epoch"]) + 1
         best_score = float(checkpoint["best_score"])
@@ -732,6 +736,7 @@ def run_single_malnet_tiny_experiment(
                 "model_state_dict": model.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
                 "scheduler_state_dict": scheduler.state_dict(),
+                "rng_state": capture_rng_state(),
                 "config": _checkpoint_config_dict(experiment_config),
                 "run_index": run_index,
                 "seed": seed,

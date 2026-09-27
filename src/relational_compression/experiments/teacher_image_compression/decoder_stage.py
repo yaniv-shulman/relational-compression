@@ -20,6 +20,7 @@ from torchvision.utils import make_grid
 from relational_compression.experiments.teacher_image_compression.metrics import psnr
 from relational_compression.experiments.teacher_image_compression.models import BinaryPatchEncoder, make_decoder
 from relational_compression.models.image_autoencoder import Decoder
+from relational_compression.randomness import capture_rng_state, restore_rng_state
 
 
 def _batch_ms_ssim(prediction: Tensor, target: Tensor) -> float:
@@ -213,6 +214,9 @@ def train_decoder_stage(
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         if "scheduler_state_dict" in checkpoint:
             scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+        if "rng_state" not in checkpoint:
+            raise ValueError(f"Checkpoint does not contain RNG state and cannot be resumed exactly: {latest_path}")
+        restore_rng_state(state=checkpoint["rng_state"])
         global_step = int(checkpoint["global_step"])
         start_epoch = int(checkpoint["completed_epoch"]) + 1
         best_val_mse = float(checkpoint["best_val_mse"])
@@ -292,6 +296,7 @@ def train_decoder_stage(
                 "decoder_state_dict": decoder.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
                 "scheduler_state_dict": scheduler.state_dict(),
+                "rng_state": capture_rng_state(),
                 "config": _config_dict_for_decoder_checkpoint(config),
                 "global_step": global_step,
                 "completed_epoch": epoch,

@@ -28,6 +28,7 @@ from relational_compression.experiments.teacherless_image_compression.data impor
 from relational_compression.experiments.teacherless_image_compression.run import _make_model, _validate
 from relational_compression.models.image_autoencoder import BinaryImageAutoencoder
 from relational_compression.paths import get_experiment_dir, get_experiment_name
+from relational_compression.randomness import capture_rng_state, restore_rng_state
 
 _CONFIG_FIELD_NAMES = (
     "task_model_name",
@@ -646,6 +647,11 @@ def run_single_flowers102_experiment(
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         if "scheduler_state_dict" in checkpoint:
             scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+        if "rng_state" not in checkpoint:
+            raise ValueError(
+                f"Checkpoint does not contain RNG state and cannot be resumed exactly: {resume_checkpoint_path}"
+            )
+        restore_rng_state(state=checkpoint["rng_state"])
         global_step = int(checkpoint["global_step"])
         best_val_hard_mse = float(checkpoint["best_val_hard_mse"])
         best_metrics = checkpoint.get("best_metrics")
@@ -838,6 +844,7 @@ def run_single_flowers102_experiment(
                 "model_state_dict": model.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
                 "scheduler_state_dict": scheduler.state_dict(),
+                "rng_state": capture_rng_state(),
                 "config": checkpoint_config,
                 "mode": mode,
                 "run_index": run_index,
