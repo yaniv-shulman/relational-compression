@@ -55,7 +55,7 @@ def test_checkpoint_config_supports_weights_only_loading(tmp_path: Path, monkeyp
     monkeypatch.setenv("RELCO_OUT_DIR", "/tmp")
     checkpoint_path = tmp_path / "checkpoint.pt"
     torch.save(
-        {"config": _checkpoint_config(_resume_config()), "rng_state": capture_rng_state()},
+        {"config": _checkpoint_config(_resume_config()), "rng_state": capture_rng_state(include_cuda=False)},
         checkpoint_path,
     )
 

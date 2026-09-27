@@ -651,7 +651,7 @@ def run_single_flowers102_experiment(
             raise ValueError(
                 f"Checkpoint does not contain RNG state and cannot be resumed exactly: {resume_checkpoint_path}"
             )
-        restore_rng_state(state=checkpoint["rng_state"])
+        restore_rng_state(state=checkpoint["rng_state"], restore_cuda=device.type == "cuda")
         global_step = int(checkpoint["global_step"])
         best_val_hard_mse = float(checkpoint["best_val_hard_mse"])
         best_metrics = checkpoint.get("best_metrics")
@@ -844,7 +844,7 @@ def run_single_flowers102_experiment(
                 "model_state_dict": model.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
                 "scheduler_state_dict": scheduler.state_dict(),
-                "rng_state": capture_rng_state(),
+                "rng_state": capture_rng_state(include_cuda=device.type == "cuda"),
                 "config": checkpoint_config,
                 "mode": mode,
                 "run_index": run_index,

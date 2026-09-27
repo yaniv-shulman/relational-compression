@@ -1,1 +1,1 @@
-"""Collision Bottleneck experiments."""
+"""Relational Compression experiments."""

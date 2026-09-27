@@ -751,6 +751,7 @@ def test_representation_checkpoint_remains_resumable_after_decoder_config_change
         dataset_version="1.0",
         image_size=256,
         batch_size=32,
+        num_workers=0,
         seed=1337,
         learning_rate=5e-4,
         min_learning_rate=1e-6,
@@ -795,6 +796,7 @@ def test_representation_checkpoint_remains_resumable_after_decoder_config_change
         }
     )
     changed_objective = SimpleNamespace(**{**vars(base), "teacher_temperature": 0.2})
+    changed_num_workers = SimpleNamespace(**{**vars(base), "num_workers": 1})
 
     saved_checkpoint = {"config": _config_dict_for_representation_checkpoint(base), "completed_epoch": 1}
 
@@ -802,6 +804,9 @@ def test_representation_checkpoint_remains_resumable_after_decoder_config_change
     assert saved_checkpoint["config"] == _config_dict_for_representation_checkpoint(changed_decoder)
     assert _config_dict_for_representation_checkpoint(base) != _config_dict_for_representation_checkpoint(
         changed_objective
+    )
+    assert _config_dict_for_representation_checkpoint(base) != _config_dict_for_representation_checkpoint(
+        changed_num_workers
     )
 
 
@@ -812,6 +817,7 @@ def test_decoder_checkpoint_config_detects_incompatible_decoder_settings() -> No
         dataset_version="1.0",
         image_size=256,
         batch_size=32,
+        num_workers=0,
         seed=1337,
         bits=16,
         hidden=128,
@@ -829,9 +835,11 @@ def test_decoder_checkpoint_config_detects_incompatible_decoder_settings() -> No
         **{**vars(base), "unique_postfix": "second", "experiment_name": "runtime-b", "device": "cpu"}
     )
     changed_decoder = SimpleNamespace(**{**vars(base), "decoder_learning_rate": 1e-4})
+    changed_num_workers = SimpleNamespace(**{**vars(base), "num_workers": 1})
 
     assert _config_dict_for_decoder_checkpoint(base) == _config_dict_for_decoder_checkpoint(changed_runtime)
     assert _config_dict_for_decoder_checkpoint(base) != _config_dict_for_decoder_checkpoint(changed_decoder)
+    assert _config_dict_for_decoder_checkpoint(base) != _config_dict_for_decoder_checkpoint(changed_num_workers)
 
 
 def test_checkpoint_paths_are_experiment_local(tmp_path) -> None:

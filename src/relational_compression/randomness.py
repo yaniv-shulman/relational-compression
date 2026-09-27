@@ -8,8 +8,8 @@ import numpy as np
 import torch
 
 
-def capture_rng_state() -> dict[str, Any]:
-    """Capture Python, NumPy, Torch CPU, and available CUDA RNG state."""
+def capture_rng_state(*, include_cuda: bool) -> dict[str, Any]:
+    """Capture Python, NumPy, Torch CPU, and optionally CUDA RNG state."""
     bit_generator, keys, position, has_gauss, cached_gaussian = cast(
         tuple[str, Any, int, int, float], np.random.get_state()
     )
@@ -24,12 +24,14 @@ def capture_rng_state() -> dict[str, Any]:
         },
         "torch": torch.get_rng_state(),
     }
-    if torch.cuda.is_available():
+    if include_cuda:
+        if not torch.cuda.is_available():
+            raise ValueError("CUDA RNG state was requested but CUDA is unavailable")
         state["torch_cuda"] = torch.cuda.get_rng_state_all()
     return state
 
 
-def restore_rng_state(state: Mapping[str, Any]) -> None:
+def restore_rng_state(state: Mapping[str, Any], *, restore_cuda: bool) -> None:
     """Restore a state captured by :func:`capture_rng_state`."""
     required_keys = ("python", "numpy", "torch")
     missing_keys = [key for key in required_keys if key not in state]
@@ -55,13 +57,11 @@ def restore_rng_state(state: Mapping[str, Any]) -> None:
     )
     torch.set_rng_state(state["torch"])
 
+    if not restore_cuda:
+        return
+    if not torch.cuda.is_available():
+        raise ValueError("CUDA RNG state was requested but CUDA is unavailable")
     cuda_state = state.get("torch_cuda")
     if cuda_state is None:
-        if torch.cuda.is_available():
-            raise ValueError("Checkpoint does not contain CUDA RNG state for the current CUDA run")
-        return
-
-    if not torch.cuda.is_available():
-        raise ValueError("Checkpoint contains CUDA RNG state but CUDA is unavailable")
-
+        raise ValueError("Checkpoint does not contain CUDA RNG state for the current CUDA run")
     torch.cuda.set_rng_state_all(cuda_state)

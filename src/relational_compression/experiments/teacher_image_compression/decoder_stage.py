@@ -216,7 +216,7 @@ def train_decoder_stage(
             scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
         if "rng_state" not in checkpoint:
             raise ValueError(f"Checkpoint does not contain RNG state and cannot be resumed exactly: {latest_path}")
-        restore_rng_state(state=checkpoint["rng_state"])
+        restore_rng_state(state=checkpoint["rng_state"], restore_cuda=device.type == "cuda")
         global_step = int(checkpoint["global_step"])
         start_epoch = int(checkpoint["completed_epoch"]) + 1
         best_val_mse = float(checkpoint["best_val_mse"])
@@ -296,7 +296,7 @@ def train_decoder_stage(
                 "decoder_state_dict": decoder.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
                 "scheduler_state_dict": scheduler.state_dict(),
-                "rng_state": capture_rng_state(),
+                "rng_state": capture_rng_state(include_cuda=device.type == "cuda"),
                 "config": _config_dict_for_decoder_checkpoint(config),
                 "global_step": global_step,
                 "completed_epoch": epoch,
@@ -338,6 +338,7 @@ _REPRESENTATION_CHECKPOINT_CONFIG_FIELDS = (
     "num_epochs",
     "image_size",
     "batch_size",
+    "num_workers",
     "seed",
     "learning_rate",
     "min_learning_rate",
@@ -371,6 +372,7 @@ _DECODER_CHECKPOINT_CONFIG_FIELDS = (
     "dataset_version",
     "image_size",
     "batch_size",
+    "num_workers",
     "seed",
     "min_learning_rate",
     "learning_rate_warmup_steps",

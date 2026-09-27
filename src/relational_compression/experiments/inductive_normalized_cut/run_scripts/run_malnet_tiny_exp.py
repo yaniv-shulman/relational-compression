@@ -589,7 +589,7 @@ def run_single_malnet_tiny_experiment(
         scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
         if "rng_state" not in checkpoint:
             raise ValueError(f"Checkpoint does not contain RNG state and cannot be resumed exactly: {latest_path}")
-        restore_rng_state(state=checkpoint["rng_state"])
+        restore_rng_state(state=checkpoint["rng_state"], restore_cuda=device.type == "cuda")
         global_step = int(checkpoint["global_step"])
         start_epoch = int(checkpoint["completed_epoch"]) + 1
         best_score = float(checkpoint["best_score"])
@@ -736,7 +736,7 @@ def run_single_malnet_tiny_experiment(
                 "model_state_dict": model.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
                 "scheduler_state_dict": scheduler.state_dict(),
-                "rng_state": capture_rng_state(),
+                "rng_state": capture_rng_state(include_cuda=device.type == "cuda"),
                 "config": _checkpoint_config_dict(experiment_config),
                 "run_index": run_index,
                 "seed": seed,

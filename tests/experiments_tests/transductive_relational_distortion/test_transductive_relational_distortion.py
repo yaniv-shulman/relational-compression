@@ -30,6 +30,9 @@ from relational_compression.experiments.transductive_relational_distortion.optim
     optimize_partition,
 )
 from relational_compression.experiments.transductive_relational_distortion.run_scripts import (
+    analyze_results as analyze_results_module,
+)
+from relational_compression.experiments.transductive_relational_distortion.run_scripts import (
     run_experiment as run_module,
 )
 from relational_compression.experiments.transductive_relational_distortion.run_scripts.run_experiment import (
@@ -43,6 +46,24 @@ from relational_compression.experiments.transductive_relational_distortion.sourc
     source_collision_edge_importance,
     source_collision_entropy_edge_importance,
 )
+
+
+def test_transductive_analysis_uses_configured_num_partitions() -> None:
+    """Validate occupancy ranges against a non-default codeword count."""
+    log_k = math.log(4.0)
+    row = {
+        "hard_h2": str(log_k),
+        "soft_h2": str(log_k),
+        "hard_k_eff": "4.0",
+        "soft_k_eff": "4.0",
+        "marginal_d2": "0.0",
+    }
+
+    validation = analyze_results_module._validate_ranges([row], num_partitions=4)
+
+    assert validation["soft_h2_plus_d2_minus_log_k_max_abs"] == 0.0
+    with pytest.raises(ValueError, match="num_partitions must be at least one"):
+        analyze_results_module._validate_ranges([], num_partitions=0)
 
 
 def _directed_edges(edges: list[tuple[int, int]]) -> torch.Tensor:

@@ -86,6 +86,8 @@ poetry run python -m relational_compression.experiments.teacher_image_compressio
 
 Each experiment package contains more focused notes and smoke-test commands. Full runs may download public datasets or pretrained model weights and can require substantial compute.
 
+The maintained reproduction interface covers these five studies; included paper artifacts do not make one-off publication-specific plotting or assembly scripts public interfaces.
+
 ## Testing
 
 Run the complete lint, type-check, and test suite with:
@@ -112,4 +114,4 @@ The manuscript master is `paper/relational_compression.tex`. Its section sources
 
 ## License
 
-The repository is released under the [MIT License](LICENSE).
+Original software in this repository is released under the [MIT License](LICENSE). Third-party materials retain their respective licenses; in particular, `paper/elsarticle.cls` is distributed under the LaTeX Project Public License as stated in its file header.

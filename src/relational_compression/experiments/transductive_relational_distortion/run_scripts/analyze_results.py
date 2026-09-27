@@ -6,7 +6,7 @@ import json
 import math
 from collections import defaultdict
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 
@@ -31,6 +31,11 @@ def _read_csv(path: Path) -> list[dict[str, str]]:
         return []
     with path.open(newline="") as handle:
         return list(csv.DictReader(handle))
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    """Read a JSON object."""
+    return cast(dict[str, Any], json.loads(path.read_text()))
 
 
 def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
@@ -204,10 +209,16 @@ def _lambda_slices(compact_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [row for row in compact_rows if any(math.isclose(float(row["lambda_org"]), value) for value in wanted)]
 
 
-def _validate_ranges(per_graph_rows: list[dict[str, str]]) -> dict[str, Any]:
-    """Validate ranges."""
+def _validate_ranges(
+    per_graph_rows: list[dict[str, str]],
+    *,
+    num_partitions: int,
+) -> dict[str, Any]:
+    """Validate ranges against the configured codeword count."""
+    if num_partitions < 1:
+        raise ValueError("num_partitions must be at least one")
     tolerance = 5e-5
-    log_k = math.log(8.0)
+    log_k = math.log(float(num_partitions))
     distortion_fields = (
         "soft_D_E",
         "hard_D_E",
@@ -229,8 +240,8 @@ def _validate_ranges(per_graph_rows: list[dict[str, str]]) -> dict[str, Any]:
         for field, lower, upper in (
             ("hard_h2", 0.0, log_k),
             ("soft_h2", 0.0, log_k),
-            ("hard_k_eff", 1.0, 8.0),
-            ("soft_k_eff", 1.0, 8.0),
+            ("hard_k_eff", 1.0, float(num_partitions)),
+            ("soft_k_eff", 1.0, float(num_partitions)),
             ("marginal_d2", 0.0, log_k),
         ):
             value = _float(row.get(field))
@@ -256,6 +267,12 @@ def _validate_ranges(per_graph_rows: list[dict[str, str]]) -> dict[str, Any]:
 def analyze_experiment(experiment_dir: Path, *, output_dir: Path) -> dict[str, Any]:
     """Analyze transductive results from an experiment directory."""
     output_dir.mkdir(parents=True, exist_ok=True)
+    effective_config = _read_json(experiment_dir / "effective_config.json")
+    try:
+        num_partitions = int(effective_config["num_partitions"])
+    except (KeyError, TypeError, ValueError) as error:
+        raise ValueError("effective_config.json must define an integer num_partitions") from error
+
     aggregate = _read_csv(experiment_dir / "aggregate_results.csv")
     per_graph = _read_csv(experiment_dir / "per_graph_results.csv")
     source_rho = _read_csv(experiment_dir / "source_rho_correlations.csv")
@@ -267,7 +284,7 @@ def analyze_experiment(experiment_dir: Path, *, output_dir: Path) -> dict[str, A
     source_rho_summary = _pair_summary(source_rho)
     random_partition_summary = _pair_summary(random_partition)
     cross_summary = _cross_objective_summary(cross_objective)
-    validation = _validate_ranges(per_graph)
+    validation = _validate_ranges(per_graph, num_partitions=num_partitions)
     validation["post_selection_cross_objective_misses"] = sum(
         int(_float(row.get("candidate_beats_target", 0))) for row in cross_objective
     )
