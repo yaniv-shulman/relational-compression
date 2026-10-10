@@ -7,6 +7,8 @@ This repository contains the experiment code and paper sources for:
 > **Relational Compression**<br>
 > *A Framework for Relational Fidelity in Constrained Representations*
 
+[Read the arXiv preprint](https://arxiv.org/abs/2609.31816).
+
 Relational compression treats relational structure itself as the fidelity-bearing source content. The accompanying experiments study finite-codeword collision geometry through controlled synthetic, graph, and image realizations.
 
 ## Background
@@ -126,6 +128,25 @@ latexmk -cd -pdf paper/relational_compression.tex
 ```
 
 The manuscript master is `paper/relational_compression.tex`. Its section sources are under `paper/sections/`, and all included PNG figures are under `paper/graphics/`.
+
+## Citation
+
+If you use this work, please cite the paper:
+
+```bibtex
+@misc{shulman2026relational,
+  title = {Relational Compression: A Framework for Relational Fidelity in Constrained Representations},
+  author = {Yaniv Shulman},
+  year = {2026},
+  eprint = {2609.31816},
+  archivePrefix = {arXiv},
+  primaryClass = {cs.LG},
+  doi = {10.48550/arXiv.2609.31816},
+  url = {https://arxiv.org/abs/2609.31816}
+}
+```
+
+Citation metadata is also available in [CITATION.cff](CITATION.cff).
 
 ## License
 
